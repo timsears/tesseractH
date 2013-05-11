@@ -5,7 +5,8 @@ module TesseractH.CAPI where
 import Foreign
 import Foreign.C
 import Foreign.C.Types()
-#include <zbar.h>
+--include <zbar.h>
+#include <tesseract/capi.h>
 
 -- | marshal an Enum from Haskell to C
 
@@ -15,6 +16,7 @@ cIntFromEnum = fromIntegral . fromEnum
 cIntToEnum :: Enum a => CInt -> a
 cIntToEnum = toEnum . fromIntegral
 
+{#fun TessVersion as ^ {} -> `String' #}
 
 {-
 

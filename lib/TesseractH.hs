@@ -8,3 +8,5 @@ import Foreign.C.Types (CULong)
 import Foreign.Ptr (Ptr, nullFunPtr)
 import TesseractH.CAPI
 --import Text.Print
+
+version = tessVersion  

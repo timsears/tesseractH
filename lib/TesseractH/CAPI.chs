@@ -16,7 +16,25 @@ cIntFromEnum = fromIntegral . fromEnum
 cIntToEnum :: Enum a => CInt -> a
 cIntToEnum = toEnum . fromIntegral
 
+{#enum TessOcrEngineMode as ^ {} deriving (Show, Eq) #}
+{#enum TessPageSegMode as ^ {} deriving (Show, Eq) #}
+{#enum TessPageIteratorLevel as ^ {} deriving (Show, Eq) #}
+{#enum TessPolyBlockType as ^ {} deriving (Show, Eq) #}
+{#enum TessOrientation as ^ {} deriving (Show, Eq) #}
+{#enum TessWritingDirection as ^ {} deriving (Show, Eq) #}
+{#enum TessTextlineOrder as ^ {} deriving (Show, Eq) #}
+
 {#fun TessVersion as ^ {} -> `String' #}
+
+{#pointer *TessBaseAPI as ^ newtype #}
+
+{#fun TessBaseAPICreate as ^ {} -> `TessBaseAPI' id #}
+{#fun TessBaseAPIDelete as ^ {id `TessBaseAPI'} -> `()' #}
+{#fun TessBaseAPISetInputName as ^ {id `TessBaseAPI',
+                              `String' } -> `()' #}
+{#fun TessBaseAPISetOutputName as ^ {id `TessBaseAPI',
+                                     `String'} -> `()' #}
+
 
 {-
 

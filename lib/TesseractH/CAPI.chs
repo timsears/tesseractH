@@ -2,22 +2,35 @@
 {-# LANGUAGE ForeignFunctionInterface #-}
 module TesseractH.CAPI where
 
+import qualified Data.Text as T
 import Foreign
 import Foreign.C
 import Foreign.C.Types()
---include <zbar.h>
+
 #include <tesseract/capi.h>
-#include <leptonica/environ.h> 
-#include <leptonica/pix.h> 
+-- #include <leptonica/environ.h> 
+-- #include <leptonica/pix.h>
+#include <leptonica/allheaders.h> 
 
--- | marshal an Enum from Haskell to C
-
+-- | marshal an Enum (Haskell to C)
 cIntFromEnum :: Enum a => a -> CInt
 cIntFromEnum = fromIntegral . fromEnum
 
+-- | unmarshal an Enum (C to Haskell)
 cIntToEnum :: Enum a => CInt -> a
 cIntToEnum = toEnum . fromIntegral
 
+--------------------------------------------
+
+{# pointer *PIX #}
+{# pointer *PIXA #}
+{# pointer *BOX #}
+{# pointer *BOXA  #}
+
+{# fun pixRead as ^ {`String'} -> `PIX' id #}
+
+
+--------------------------------------------
 {# enum TessOcrEngineMode as ^ {} deriving (Show, Eq) #}
 {# enum TessPageSegMode as ^ {} deriving (Show, Eq) #}
 {# enum TessPageIteratorLevel as ^ {} deriving (Show, Eq) #}
@@ -26,7 +39,7 @@ cIntToEnum = toEnum . fromIntegral
 {# enum TessWritingDirection as ^ {} deriving (Show, Eq) #}
 {# enum TessTextlineOrder as ^ {} deriving (Show, Eq) #}
 
-{# fun TessVersion as ^ {} -> `String' #}
+{# fun pure TessVersion as ^ {} -> `String' #}
 
 {# pointer *TessBaseAPI as ^ newtype #}
 {# fun TessBaseAPICreate as ^ {} -> `TessBaseAPI' id #}
@@ -36,29 +49,45 @@ cIntToEnum = toEnum . fromIntegral
 {# fun TessBaseAPISetOutputName as ^ {id `TessBaseAPI',
                                      `String'} -> `()' #}
 
-{# pointer *PIX #}
-{# pointer *PIXA #}
-{# pointer *BOX #}
-{# pointer *BOXA  #}
-
 {# fun TessBaseAPIInit2 as ^ 
 { id `TessBaseAPI',
   `String', -- datapath
   `String', -- languate
-  cIntFromEnum `TessOcrEngineMode' } -> `Int' fromIntegral #}
+  cIntFromEnum `TessOcrEngineMode'
+  } -> `Int' fromIntegral #}
 
 {# fun TessBaseAPISetPageSegMode as ^ 
 { id `TessBaseAPI',
-  cIntFromEnum `TessPageSegMode'} -> `()' #}
+  cIntFromEnum `TessPageSegMode'
+  } -> `()' #}
 
 {# fun TessBaseAPISetImage as ^ 
 { id `TessBaseAPI',
-  id `Ptr CUChar',
+  id `Ptr CUChar',    -- imagedata
   fromIntegral `Int', -- width
   fromIntegral `Int', -- height
   fromIntegral `Int', -- bytes per pixel
-  fromIntegral `Int' -- bytes per line
+  fromIntegral `Int'  -- bytes per line
 } -> `()' #}
+
+{# fun TessBaseAPISetImage2 as ^ 
+{ id `TessBaseAPI',
+  id `PIX'    -- imagedata, struct from leptonica
+} -> `()' #}
+
+{# fun TessBaseAPISetRectangle as ^
+{ id `TessBaseAPI', 
+  fromIntegral `Int', -- left 
+  fromIntegral `Int', -- top 
+  fromIntegral `Int', -- width
+  fromIntegral `Int'  -- heigth
+  } -> `()' #}
+
+{# fun TessBaseAPIGetUTF8Text as ^
+{ id `TessBaseAPI' 
+  } -> `String' #} 
+
+
 
 -- {# fun TesssBaseAPISetImage2 as ^ 
 -- { id `TessBaseAPI',

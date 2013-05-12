@@ -1,7 +1,10 @@
 dist
+dist_sandbox
 cabal-dev
 *.o
 *.hi
 *.chi
 *.chs.h
 .virthualenv
+*.#*
+TAGS

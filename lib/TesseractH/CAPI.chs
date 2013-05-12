@@ -7,6 +7,8 @@ import Foreign.C
 import Foreign.C.Types()
 --include <zbar.h>
 #include <tesseract/capi.h>
+#include <leptonica/environ.h> 
+#include <leptonica/pix.h> 
 
 -- | marshal an Enum from Haskell to C
 
@@ -16,24 +18,52 @@ cIntFromEnum = fromIntegral . fromEnum
 cIntToEnum :: Enum a => CInt -> a
 cIntToEnum = toEnum . fromIntegral
 
-{#enum TessOcrEngineMode as ^ {} deriving (Show, Eq) #}
-{#enum TessPageSegMode as ^ {} deriving (Show, Eq) #}
-{#enum TessPageIteratorLevel as ^ {} deriving (Show, Eq) #}
-{#enum TessPolyBlockType as ^ {} deriving (Show, Eq) #}
-{#enum TessOrientation as ^ {} deriving (Show, Eq) #}
-{#enum TessWritingDirection as ^ {} deriving (Show, Eq) #}
-{#enum TessTextlineOrder as ^ {} deriving (Show, Eq) #}
+{# enum TessOcrEngineMode as ^ {} deriving (Show, Eq) #}
+{# enum TessPageSegMode as ^ {} deriving (Show, Eq) #}
+{# enum TessPageIteratorLevel as ^ {} deriving (Show, Eq) #}
+{# enum TessPolyBlockType as ^ {} deriving (Show, Eq) #}
+{# enum TessOrientation as ^ {} deriving (Show, Eq) #}
+{# enum TessWritingDirection as ^ {} deriving (Show, Eq) #}
+{# enum TessTextlineOrder as ^ {} deriving (Show, Eq) #}
 
-{#fun TessVersion as ^ {} -> `String' #}
+{# fun TessVersion as ^ {} -> `String' #}
 
-{#pointer *TessBaseAPI as ^ newtype #}
-
-{#fun TessBaseAPICreate as ^ {} -> `TessBaseAPI' id #}
-{#fun TessBaseAPIDelete as ^ {id `TessBaseAPI'} -> `()' #}
-{#fun TessBaseAPISetInputName as ^ {id `TessBaseAPI',
+{# pointer *TessBaseAPI as ^ newtype #}
+{# fun TessBaseAPICreate as ^ {} -> `TessBaseAPI' id #}
+{# fun TessBaseAPIDelete as ^ {id `TessBaseAPI'} -> `()'  #}
+{# fun TessBaseAPISetInputName as ^ {id `TessBaseAPI',
                               `String' } -> `()' #}
-{#fun TessBaseAPISetOutputName as ^ {id `TessBaseAPI',
+{# fun TessBaseAPISetOutputName as ^ {id `TessBaseAPI',
                                      `String'} -> `()' #}
+
+{# pointer *PIX #}
+{# pointer *PIXA #}
+{# pointer *BOX #}
+{# pointer *BOXA  #}
+
+{# fun TessBaseAPIInit2 as ^ 
+{ id `TessBaseAPI',
+  `String', -- datapath
+  `String', -- languate
+  cIntFromEnum `TessOcrEngineMode' } -> `Int' fromIntegral #}
+
+{# fun TessBaseAPISetPageSegMode as ^ 
+{ id `TessBaseAPI',
+  cIntFromEnum `TessPageSegMode'} -> `()' #}
+
+{# fun TessBaseAPISetImage as ^ 
+{ id `TessBaseAPI',
+  id `Ptr CUChar',
+  fromIntegral `Int', -- width
+  fromIntegral `Int', -- height
+  fromIntegral `Int', -- bytes per pixel
+  fromIntegral `Int' -- bytes per line
+} -> `()' #}
+
+-- {# fun TesssBaseAPISetImage2 as ^ 
+-- { id `TessBaseAPI',
+--   id `PIX'
+-- } -> `()' 
 
 
 {-
@@ -42,12 +72,7 @@ cIntToEnum = toEnum . fromIntegral
 {#enum zbar_orientation_t as ZbarOrientation {underscoreToCase} deriving (Show, Eq) #}
 {#enum zbar_error_t as ZbarError {underscoreToCase} deriving (Show, Eq) #}
 {#enum zbar_config_t as ZbarConfig {underscoreToCase} deriving (Show, Eq, Bounded) #}
-{#enum zbar_modifier_t as ZbarModifierConfig {underscoreToCase} deriving (Show, Eq) #}
-
-{#pointer *zbar_decoder_t as ZbarDecoder newtype #}
-{#pointer *zbar_image_scanner_t as ZbarImageScanner newtype#}
-{#pointer *zbar_image_t as ZbarImage newtype #}
-{#pointer *zbar_symbol_t as ZbarSymbolT newtype #}
+{#enum zbar_modifier_t as ZbarModifierConfig {underscoreToCase} deriving (Show, 
 
 {#fun zbar_image_scanner_create as ^ { } -> `ZbarImageScanner' id  #}
 

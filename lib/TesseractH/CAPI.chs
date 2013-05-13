@@ -21,6 +21,7 @@ cIntToEnum :: Enum a => CInt -> a
 cIntToEnum = toEnum . fromIntegral
 
 --------------------------------------------
+--leptonica
 
 {# pointer *PIX #}
 {# pointer *PIXA #}
@@ -29,8 +30,9 @@ cIntToEnum = toEnum . fromIntegral
 
 {# fun pixRead as ^ {`String'} -> `PIX' id #}
 
-
 --------------------------------------------
+--tesseract
+
 {# enum TessOcrEngineMode as ^ {} deriving (Show, Eq) #}
 {# enum TessPageSegMode as ^ {} deriving (Show, Eq) #}
 {# enum TessPageIteratorLevel as ^ {} deriving (Show, Eq) #}
@@ -52,7 +54,7 @@ cIntToEnum = toEnum . fromIntegral
 {# fun TessBaseAPIInit2 as ^ 
 { id `TessBaseAPI',
   `String', -- datapath
-  `String', -- languate
+  `String', -- language
   cIntFromEnum `TessOcrEngineMode'
   } -> `Int' fromIntegral #}
 
@@ -75,6 +77,13 @@ cIntToEnum = toEnum . fromIntegral
   id `PIX'    -- imagedata, struct from leptonica
 } -> `()' #}
 
+{# fun TessBaseAPISetSourceResolution as ^ 
+{ id `TessBaseAPI',
+  `Int'    -- ppi 
+} -> `()' #}
+
+
+
 {# fun TessBaseAPISetRectangle as ^
 { id `TessBaseAPI', 
   fromIntegral `Int', -- left 
@@ -86,6 +95,14 @@ cIntToEnum = toEnum . fromIntegral
 {# fun TessBaseAPIGetUTF8Text as ^
 { id `TessBaseAPI' 
   } -> `String' #} 
+
+{# fun TessBaseAPIMeanTextConf as ^ 
+{ id `TessBaseAPI' }
+-> `Int' #}
+
+-- {# fun TessBaseAPIAllWordConfidences as ^ 
+-- { id `TessBaseAPI' }
+-- -> `[Int]' peek* #}
 
 
 

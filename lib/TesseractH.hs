@@ -45,7 +45,7 @@ runOCR fn = do
   s <- tessContext fn
   runReaderT ocrWhole s
 
-runOCRRegions :: FilePath -> [TessRect] -> IO [String]
-runOCRRegions fn rects = do
+runOCRRegions :: [TessRect] -> FilePath -> IO [String]
+runOCRRegions rects fn = do
   s <- tessContext fn
   runReaderT (ocrRects rects) s

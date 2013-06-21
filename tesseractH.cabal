@@ -24,5 +24,6 @@ Library
   hs-source-dirs:  lib
   Build-tools:     c2hs
   ghc-options:     -Wall 
+  cc-options:      -U__BLOCKS__
   Other-modules: 
   Extra-libraries: tesseract

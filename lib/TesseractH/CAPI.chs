@@ -88,6 +88,12 @@ cIntToEnum = toEnum . fromIntegral
   } -> `String' #} 
 
 
+{# fun TessBaseAPIGetHOCRText as ^
+{ id `TessBaseAPI',
+  fromIntegral `Int' -- ^ page number
+  } -> `String' #} 
+
+
 
 -- {# fun TesssBaseAPISetImage2 as ^ 
 -- { id `TessBaseAPI',

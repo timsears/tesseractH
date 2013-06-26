@@ -1,4 +1,4 @@
-{-# LANGUAGE CPP #-} 
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE ForeignFunctionInterface #-}
 module TesseractH.CAPI where
 
@@ -8,9 +8,9 @@ import Foreign.C
 import Foreign.C.Types()
 
 #include <tesseract/capi.h>
--- #include <leptonica/environ.h> 
+-- #include <leptonica/environ.h>
 -- #include <leptonica/pix.h>
-#include <leptonica/allheaders.h> 
+#include <leptonica/allheaders.h>
 
 -- | marshal an Enum (Haskell to C)
 cIntFromEnum :: Enum a => a -> CInt
@@ -28,6 +28,15 @@ cIntToEnum = toEnum . fromIntegral
 {# pointer *BOXA  #}
 
 {# fun pixRead as ^ {`String'} -> `PIX' id #}
+
+{# fun pixReadMemPng as ^ {id `Ptr CUChar', fromIntegral `Int'} -> `PIX' id #}
+{# fun pixReadMemJpeg as ^
+  {id `Ptr CUChar'
+  , fromIntegral `Int'
+  , fromIntegral `Int'
+  , fromIntegral `Int'
+  , id `Ptr CInt'
+  , fromIntegral `Int' } -> `PIX' id #}
 
 
 --------------------------------------------
@@ -49,19 +58,19 @@ cIntToEnum = toEnum . fromIntegral
 {# fun TessBaseAPISetOutputName as ^ {id `TessBaseAPI',
                                      `String'} -> `()' #}
 
-{# fun TessBaseAPIInit2 as ^ 
+{# fun TessBaseAPIInit2 as ^
 { id `TessBaseAPI',
   `String', -- datapath
   `String', -- languate
   cIntFromEnum `TessOcrEngineMode'
   } -> `Int' fromIntegral #}
 
-{# fun TessBaseAPISetPageSegMode as ^ 
+{# fun TessBaseAPISetPageSegMode as ^
 { id `TessBaseAPI',
   cIntFromEnum `TessPageSegMode'
   } -> `()' #}
 
-{# fun TessBaseAPISetImage as ^ 
+{# fun TessBaseAPISetImage as ^
 { id `TessBaseAPI',
   id `Ptr CUChar',    -- imagedata
   fromIntegral `Int', -- width
@@ -70,35 +79,35 @@ cIntToEnum = toEnum . fromIntegral
   fromIntegral `Int'  -- bytes per line
 } -> `()' #}
 
-{# fun TessBaseAPISetImage2 as ^ 
+{# fun TessBaseAPISetImage2 as ^
 { id `TessBaseAPI',
   id `PIX'    -- imagedata, struct from leptonica
 } -> `()' #}
 
 {# fun TessBaseAPISetRectangle as ^
-{ id `TessBaseAPI', 
-  fromIntegral `Int', -- left 
-  fromIntegral `Int', -- top 
+{ id `TessBaseAPI',
+  fromIntegral `Int', -- left
+  fromIntegral `Int', -- top
   fromIntegral `Int', -- width
   fromIntegral `Int'  -- heigth
   } -> `()' #}
 
 {# fun TessBaseAPIGetUTF8Text as ^
-{ id `TessBaseAPI' 
-  } -> `String' #} 
+{ id `TessBaseAPI'
+  } -> `String' #}
 
 
 {# fun TessBaseAPIGetHOCRText as ^
 { id `TessBaseAPI',
   fromIntegral `Int' -- ^ page number
-  } -> `String' #} 
+  } -> `String' #}
 
 
 
--- {# fun TesssBaseAPISetImage2 as ^ 
+-- {# fun TesssBaseAPISetImage2 as ^
 -- { id `TessBaseAPI',
 --   id `PIX'
--- } -> `()' 
+-- } -> `()'
 
 
 {-
@@ -107,16 +116,16 @@ cIntToEnum = toEnum . fromIntegral
 {#enum zbar_orientation_t as ZbarOrientation {underscoreToCase} deriving (Show, Eq) #}
 {#enum zbar_error_t as ZbarError {underscoreToCase} deriving (Show, Eq) #}
 {#enum zbar_config_t as ZbarConfig {underscoreToCase} deriving (Show, Eq, Bounded) #}
-{#enum zbar_modifier_t as ZbarModifierConfig {underscoreToCase} deriving (Show, 
+{#enum zbar_modifier_t as ZbarModifierConfig {underscoreToCase} deriving (Show,
 
 {#fun zbar_image_scanner_create as ^ { } -> `ZbarImageScanner' id  #}
 
 {#fun zbar_image_scanner_set_config as ^ {
     id `ZbarImageScanner',
     cIntFromEnum `ZbarSymbolType',
-    cIntFromEnum `ZbarConfig',     
+    cIntFromEnum `ZbarConfig',
     `Int'} -> `Int' #}
-    
+
 {#fun zbar_image_create as ^ { } -> `ZbarImage' id  #}
 
 -- Todo -- Nicer type for second arg. Also, deal with 'zbar_fourcc'
@@ -128,25 +137,25 @@ cIntToEnum = toEnum . fromIntegral
     id `ZbarImage',
     `Int',
     `Int' } -> `()' #}
- 
+
 --TODO How to pass data in through second arg?
 {#fun zbar_image_set_data as ^ {
-    id `ZbarImage', 
-    id `Ptr ()', 
+    id `ZbarImage',
+    id `Ptr ()',
     `Int',
     id `FunPtr (ZbarImage -> IO())'} -> `()' #}
-    
+
 -- returns number of found barcodes
 {#fun zbar_scan_image as ^ {
-     id `ZbarImageScanner', 
-     id `ZbarImage'} -> `Int' #} 
+     id `ZbarImageScanner',
+     id `ZbarImage'} -> `Int' #}
 
 {#fun zbar_image_first_symbol as ^ {
     id `ZbarImage' } -> `ZbarSymbolT' id #}
 
 {#fun zbar_symbol_next as ^ {
     id `ZbarSymbolT'} -> `ZbarSymbolT' id #}
-    
+
 {#fun zbar_symbol_get_type as ^ {
     id `ZbarSymbolT'} -> `ZbarSymbolType' cIntToEnum #}
 
@@ -172,11 +181,11 @@ cIntToEnum = toEnum . fromIntegral
     id `ZbarSymbolT' } -> `Int' #}
 
 {#fun zbar_symbol_get_loc_x as ^ {
-    id `ZbarSymbolT', 
+    id `ZbarSymbolT',
     `Int' } -> `Int' #}
 
 {#fun zbar_symbol_get_loc_y as ^ {
-    id `ZbarSymbolT', 
+    id `ZbarSymbolT',
     `Int' } -> `Int' #}
 
 {#fun zbar_symbol_get_orientation as ^ {
@@ -191,9 +200,9 @@ cIntToEnum = toEnum . fromIntegral
     alloca - `Ptr ()' peek* } -> `()' id-   #}
 
 {#fun scanimage as ^ {`String'} -> `Int'  #}
-  
--}
-  
+
 -}
 
- 
+-}
+
+

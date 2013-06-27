@@ -29,13 +29,27 @@ cIntToEnum = toEnum . fromIntegral
 
 {# fun pixRead as ^ {`String'} -> `PIX' id #}
 
+-- | second argument is size
 {# fun pixReadMemPng as ^ {id `Ptr CUChar', fromIntegral `Int'} -> `PIX' id #}
+
+-- | Cant get the args into haddock properly so here they are.. 
+--
+--   1. image data
+--
+--   1. size
+--
+--   1. flags
+--
+--   1. reduction (1, 2, 4, 8)
+--
+--   1. warnings
+--
 {# fun pixReadMemJpeg as ^
-  {id `Ptr CUChar'
-  , fromIntegral `Int'
-  , fromIntegral `Int'
-  , fromIntegral `Int'
-  , id `Ptr CInt'
+  { id `Ptr CUChar'    -- ^ image data
+  , fromIntegral `Int' -- ^ size
+  , fromIntegral `Int' -- ^ flags
+  , fromIntegral `Int' -- ^ reduction (1, 2, 4, 8)
+  , id `Ptr CInt'      -- ^ warnings
   , fromIntegral `Int' } -> `PIX' id #}
 
 
@@ -70,6 +84,17 @@ cIntToEnum = toEnum . fromIntegral
   cIntFromEnum `TessPageSegMode'
   } -> `()' #}
 
+-- | Args:
+-- 1. image data
+--
+-- 1. width
+--
+-- 1. hieght
+--
+-- 1. bytes per pixel
+--
+-- 1. bytes per line
+--
 {# fun TessBaseAPISetImage as ^
 { id `TessBaseAPI',
   id `Ptr CUChar',    -- imagedata

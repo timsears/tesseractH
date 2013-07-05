@@ -32,7 +32,7 @@ cIntToEnum = toEnum . fromIntegral
 -- | second argument is size
 {# fun pixReadMemPng as ^ {id `Ptr CUChar', fromIntegral `Int'} -> `PIX' id #}
 
--- | Cant get the args into haddock properly so here they are.. 
+-- | Cant get the args into haddock properly so here they are..
 --
 --   1. image data
 --
@@ -72,6 +72,7 @@ cIntToEnum = toEnum . fromIntegral
 {# fun TessBaseAPISetOutputName as ^ {id `TessBaseAPI',
                                      `String'} -> `()' #}
 
+-- | baseAPI, datapath, langauge, mode
 {# fun TessBaseAPIInit2 as ^
 { id `TessBaseAPI',
   `String', -- datapath

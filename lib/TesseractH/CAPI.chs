@@ -22,10 +22,27 @@ cIntToEnum = toEnum . fromIntegral
 
 --------------------------------------------
 
+-- ** Leptonica Functions
+
+-- *** Box stuff
+data Box = Box
+  { leptBoxX :: Int
+  , leptBoxY :: Int
+  , leptBoxW :: Int
+  , leptBoxH :: Int
+  , leptBoxRefCount :: Int }
+  deriving (Show, Eq, Ord, Read)
+
 {# pointer *PIX #}
 {# pointer *PIXA #}
-{# pointer *BOX #}
+{# pointer *BOX as BOX -> Box #}
 {# pointer *BOXA  #}
+
+{# fun boxaCreate as ^ {fromIntegral `Int'} -> `BOXA' id #}
+{# fun boxaGetCount as ^ {id `BOXA'} -> `Int' fromIntegral #}
+
+-- | boxarray, index, access flag
+{# fun boxaGetBox as ^ {id `BOXA', fromIntegral `Int', fromIntegral `Int'} -> `BOX' id #}
 
 {# fun pixRead as ^ {`String'} -> `PIX' id #}
 
@@ -52,8 +69,51 @@ cIntToEnum = toEnum . fromIntegral
   , id `Ptr CInt'      -- ^ warnings
   , fromIntegral `Int' } -> `PIX' id #}
 
+{# fun pixClone as ^ {id `PIX'} -> `PIX' id #}
 
---------------------------------------------
+
+{# fun pixConnComp as ^
+  { id `PIX'
+  , id `Ptr PIXA'
+  , fromIntegral `Int'
+  } -> `BOXA' id #}
+
+{# fun pixConnCompBB as ^
+  { id `PIX'
+  , fromIntegral `Int'
+  } -> `BOXA' id #}
+
+-- ** Image Processing
+
+-- | args are:
+--
+--   1. pix
+--
+--   1. tile width
+--
+--   1. tile height
+--
+--   1. smooth x
+--
+--   1. smooth y
+--
+--   1. scorefract (typically 0.1)
+--
+--   1. thresholds.. can be null
+--
+--   1. destination pix
+{# fun pixOtsuAdaptiveThreshold  as ^
+  { id `PIX'
+  , fromIntegral `Int'
+  , fromIntegral `Int'
+  , fromIntegral `Int'
+  , fromIntegral `Int'
+  , CFloat `Float'
+  , id `Ptr PIX'
+  , id `Ptr PIX'
+  } -> `Int' fromIntegral #}
+-- LEPT_DLL extern l_int32 pixOtsuAdaptiveThreshold ( PIX *pixs, l_int32 sx, l_int32 sy, l_int32 smoothx, l_int32 smoothy, l_float32 scorefract, PIX **ppixth, PIX **ppixd );
+-- ** Tesseract
 {# enum TessOcrEngineMode as ^ {} deriving (Show, Eq) #}
 {# enum TessPageSegMode as ^ {} deriving (Show, Eq) #}
 {# enum TessPageIteratorLevel as ^ {} deriving (Show, Eq) #}

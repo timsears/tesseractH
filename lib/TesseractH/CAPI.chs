@@ -6,6 +6,8 @@ import qualified Data.Text as T
 import Foreign
 import Foreign.C
 import Foreign.C.Types()
+import Control.Monad (liftM4)
+import Control.Monad (liftM4)
 
 #include <tesseract/capi.h>
 -- #include <leptonica/environ.h>
@@ -25,13 +27,7 @@ cIntToEnum = toEnum . fromIntegral
 -- ** Leptonica Functions
 
 -- *** Box stuff
-data Box = Box
-  { leptBoxX :: Int
-  , leptBoxY :: Int
-  , leptBoxW :: Int
-  , leptBoxH :: Int
-  , leptBoxRefCount :: Int }
-  deriving (Show, Eq, Ord, Read)
+-- data CBox = CBox
 
 {# pointer *PIX #}
 {# pointer *PIXA #}
@@ -40,6 +36,23 @@ data Box = Box
 
 {# fun boxaCreate as ^ {fromIntegral `Int'} -> `BOXA' id #}
 {# fun boxaGetCount as ^ {id `BOXA'} -> `Int' fromIntegral #}
+
+data Box = Box { x :: Int, y :: Int, w :: Int, h :: Int} deriving (Show, Eq, Ord, Read) 
+
+cBoxW :: Ptr BOX -> IO Int
+cBoxW b = fmap fromIntegral $ {#get BOX -> w#} b
+
+cBoxH :: Ptr BOX -> IO Int
+cBoxH b = fmap fromIntegral $ {#get BOX -> h#} b
+
+cBoxX :: Ptr BOX -> IO Int
+cBoxX b = fmap fromIntegral $ {#get BOX -> x#} b
+
+cBoxY :: Ptr BOX -> IO Int
+cBoxY b = fmap fromIntegral $ {#get BOX -> y#} b
+
+cBoxToBox :: Ptr BOX -> IO Box
+cBoxToBox c = liftM4 Box (cBoxX c) (cBoxY c) (cBoxW c) (cBoxH c)
 
 -- | boxarray, index, access flag
 {# fun boxaGetBox as ^ {id `BOXA', fromIntegral `Int', fromIntegral `Int'} -> `BOX' id #}

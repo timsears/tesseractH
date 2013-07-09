@@ -1,4 +1,4 @@
-{-# LANGUAGE CPP #-} 
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE ForeignFunctionInterface #-}
 module TesseractH.CAPI where
 
@@ -6,11 +6,13 @@ import qualified Data.Text as T
 import Foreign
 import Foreign.C
 import Foreign.C.Types()
+import Control.Monad (liftM4)
+import Control.Monad (liftM4)
 
 #include <tesseract/capi.h>
--- #include <leptonica/environ.h> 
+-- #include <leptonica/environ.h>
 -- #include <leptonica/pix.h>
-#include <leptonica/allheaders.h> 
+#include <leptonica/allheaders.h>
 
 -- | marshal an Enum (Haskell to C)
 cIntFromEnum :: Enum a => a -> CInt
@@ -22,15 +24,109 @@ cIntToEnum = toEnum . fromIntegral
 
 --------------------------------------------
 
+-- ** Leptonica Functions
+
+-- *** Box stuff
+-- data CBox = CBox
+
 {# pointer *PIX #}
 {# pointer *PIXA #}
-{# pointer *BOX #}
+{# pointer *BOX as BOX -> Box #}
 {# pointer *BOXA  #}
+
+{# fun boxaCreate as ^ {fromIntegral `Int'} -> `BOXA' id #}
+{# fun boxaGetCount as ^ {id `BOXA'} -> `Int' fromIntegral #}
+
+data Box = Box { x :: Int, y :: Int, w :: Int, h :: Int} deriving (Show, Eq, Ord, Read) 
+
+cBoxW :: Ptr BOX -> IO Int
+cBoxW b = fmap fromIntegral $ {#get BOX -> w#} b
+
+cBoxH :: Ptr BOX -> IO Int
+cBoxH b = fmap fromIntegral $ {#get BOX -> h#} b
+
+cBoxX :: Ptr BOX -> IO Int
+cBoxX b = fmap fromIntegral $ {#get BOX -> x#} b
+
+cBoxY :: Ptr BOX -> IO Int
+cBoxY b = fmap fromIntegral $ {#get BOX -> y#} b
+
+cBoxToBox :: Ptr BOX -> IO Box
+cBoxToBox c = liftM4 Box (cBoxX c) (cBoxY c) (cBoxW c) (cBoxH c)
+
+-- | boxarray, index, access flag
+{# fun boxaGetBox as ^ {id `BOXA', fromIntegral `Int', fromIntegral `Int'} -> `BOX' id #}
 
 {# fun pixRead as ^ {`String'} -> `PIX' id #}
 
+-- | second argument is size
+{# fun pixReadMemPng as ^ {id `Ptr CUChar', fromIntegral `Int'} -> `PIX' id #}
 
---------------------------------------------
+-- | Cant get the args into haddock properly so here they are..
+--
+--   1. image data
+--
+--   1. size
+--
+--   1. flags
+--
+--   1. reduction (1, 2, 4, 8)
+--
+--   1. warnings
+--
+{# fun pixReadMemJpeg as ^
+  { id `Ptr CUChar'    -- ^ image data
+  , fromIntegral `Int' -- ^ size
+  , fromIntegral `Int' -- ^ flags
+  , fromIntegral `Int' -- ^ reduction (1, 2, 4, 8)
+  , id `Ptr CInt'      -- ^ warnings
+  , fromIntegral `Int' } -> `PIX' id #}
+
+{# fun pixClone as ^ {id `PIX'} -> `PIX' id #}
+
+
+{# fun pixConnComp as ^
+  { id `PIX'
+  , id `Ptr PIXA'
+  , fromIntegral `Int'
+  } -> `BOXA' id #}
+
+{# fun pixConnCompBB as ^
+  { id `PIX'
+  , fromIntegral `Int'
+  } -> `BOXA' id #}
+
+-- ** Image Processing
+
+-- | args are:
+--
+--   1. pix
+--
+--   1. tile width
+--
+--   1. tile height
+--
+--   1. smooth x
+--
+--   1. smooth y
+--
+--   1. scorefract (typically 0.1)
+--
+--   1. thresholds.. can be null
+--
+--   1. destination pix
+{# fun pixOtsuAdaptiveThreshold  as ^
+  { id `PIX'
+  , fromIntegral `Int'
+  , fromIntegral `Int'
+  , fromIntegral `Int'
+  , fromIntegral `Int'
+  , CFloat `Float'
+  , id `Ptr PIX'
+  , id `Ptr PIX'
+  } -> `Int' fromIntegral #}
+-- LEPT_DLL extern l_int32 pixOtsuAdaptiveThreshold ( PIX *pixs, l_int32 sx, l_int32 sy, l_int32 smoothx, l_int32 smoothy, l_float32 scorefract, PIX **ppixth, PIX **ppixd );
+-- ** Tesseract
 {# enum TessOcrEngineMode as ^ {} deriving (Show, Eq) #}
 {# enum TessPageSegMode as ^ {} deriving (Show, Eq) #}
 {# enum TessPageIteratorLevel as ^ {} deriving (Show, Eq) #}
@@ -49,19 +145,31 @@ cIntToEnum = toEnum . fromIntegral
 {# fun TessBaseAPISetOutputName as ^ {id `TessBaseAPI',
                                      `String'} -> `()' #}
 
-{# fun TessBaseAPIInit2 as ^ 
+-- | baseAPI, datapath, langauge, mode
+{# fun TessBaseAPIInit2 as ^
 { id `TessBaseAPI',
   `String', -- datapath
   `String', -- languate
   cIntFromEnum `TessOcrEngineMode'
   } -> `Int' fromIntegral #}
 
-{# fun TessBaseAPISetPageSegMode as ^ 
+{# fun TessBaseAPISetPageSegMode as ^
 { id `TessBaseAPI',
   cIntFromEnum `TessPageSegMode'
   } -> `()' #}
 
-{# fun TessBaseAPISetImage as ^ 
+-- | Args:
+-- 1. image data
+--
+-- 1. width
+--
+-- 1. hieght
+--
+-- 1. bytes per pixel
+--
+-- 1. bytes per line
+--
+{# fun TessBaseAPISetImage as ^
 { id `TessBaseAPI',
   id `Ptr CUChar',    -- imagedata
   fromIntegral `Int', -- width
@@ -70,29 +178,35 @@ cIntToEnum = toEnum . fromIntegral
   fromIntegral `Int'  -- bytes per line
 } -> `()' #}
 
-{# fun TessBaseAPISetImage2 as ^ 
+{# fun TessBaseAPISetImage2 as ^
 { id `TessBaseAPI',
   id `PIX'    -- imagedata, struct from leptonica
 } -> `()' #}
 
 {# fun TessBaseAPISetRectangle as ^
-{ id `TessBaseAPI', 
-  fromIntegral `Int', -- left 
-  fromIntegral `Int', -- top 
+{ id `TessBaseAPI',
+  fromIntegral `Int', -- left
+  fromIntegral `Int', -- top
   fromIntegral `Int', -- width
   fromIntegral `Int'  -- heigth
   } -> `()' #}
 
 {# fun TessBaseAPIGetUTF8Text as ^
-{ id `TessBaseAPI' 
-  } -> `String' #} 
+{ id `TessBaseAPI'
+  } -> `String' #}
+
+
+{# fun TessBaseAPIGetHOCRText as ^
+{ id `TessBaseAPI',
+  fromIntegral `Int' -- ^ page number
+  } -> `String' #}
 
 
 
--- {# fun TesssBaseAPISetImage2 as ^ 
+-- {# fun TesssBaseAPISetImage2 as ^
 -- { id `TessBaseAPI',
 --   id `PIX'
--- } -> `()' 
+-- } -> `()'
 
 
 {-
@@ -101,16 +215,16 @@ cIntToEnum = toEnum . fromIntegral
 {#enum zbar_orientation_t as ZbarOrientation {underscoreToCase} deriving (Show, Eq) #}
 {#enum zbar_error_t as ZbarError {underscoreToCase} deriving (Show, Eq) #}
 {#enum zbar_config_t as ZbarConfig {underscoreToCase} deriving (Show, Eq, Bounded) #}
-{#enum zbar_modifier_t as ZbarModifierConfig {underscoreToCase} deriving (Show, 
+{#enum zbar_modifier_t as ZbarModifierConfig {underscoreToCase} deriving (Show,
 
 {#fun zbar_image_scanner_create as ^ { } -> `ZbarImageScanner' id  #}
 
 {#fun zbar_image_scanner_set_config as ^ {
     id `ZbarImageScanner',
     cIntFromEnum `ZbarSymbolType',
-    cIntFromEnum `ZbarConfig',     
+    cIntFromEnum `ZbarConfig',
     `Int'} -> `Int' #}
-    
+
 {#fun zbar_image_create as ^ { } -> `ZbarImage' id  #}
 
 -- Todo -- Nicer type for second arg. Also, deal with 'zbar_fourcc'
@@ -122,25 +236,25 @@ cIntToEnum = toEnum . fromIntegral
     id `ZbarImage',
     `Int',
     `Int' } -> `()' #}
- 
+
 --TODO How to pass data in through second arg?
 {#fun zbar_image_set_data as ^ {
-    id `ZbarImage', 
-    id `Ptr ()', 
+    id `ZbarImage',
+    id `Ptr ()',
     `Int',
     id `FunPtr (ZbarImage -> IO())'} -> `()' #}
-    
+
 -- returns number of found barcodes
 {#fun zbar_scan_image as ^ {
-     id `ZbarImageScanner', 
-     id `ZbarImage'} -> `Int' #} 
+     id `ZbarImageScanner',
+     id `ZbarImage'} -> `Int' #}
 
 {#fun zbar_image_first_symbol as ^ {
     id `ZbarImage' } -> `ZbarSymbolT' id #}
 
 {#fun zbar_symbol_next as ^ {
     id `ZbarSymbolT'} -> `ZbarSymbolT' id #}
-    
+
 {#fun zbar_symbol_get_type as ^ {
     id `ZbarSymbolT'} -> `ZbarSymbolType' cIntToEnum #}
 
@@ -166,11 +280,11 @@ cIntToEnum = toEnum . fromIntegral
     id `ZbarSymbolT' } -> `Int' #}
 
 {#fun zbar_symbol_get_loc_x as ^ {
-    id `ZbarSymbolT', 
+    id `ZbarSymbolT',
     `Int' } -> `Int' #}
 
 {#fun zbar_symbol_get_loc_y as ^ {
-    id `ZbarSymbolT', 
+    id `ZbarSymbolT',
     `Int' } -> `Int' #}
 
 {#fun zbar_symbol_get_orientation as ^ {
@@ -185,9 +299,9 @@ cIntToEnum = toEnum . fromIntegral
     alloca - `Ptr ()' peek* } -> `()' id-   #}
 
 {#fun scanimage as ^ {`String'} -> `Int'  #}
-  
--}
-  
+
 -}
 
- 
+-}
+
+

@@ -5,8 +5,6 @@ module TesseractH.CAPI where
 import qualified Data.Text as T
 import Foreign
 import Foreign.C
-import Foreign.C.Types()
-import Control.Monad (liftM4)
 import Control.Monad (liftM4)
 
 #include <tesseract/capi.h>
@@ -55,8 +53,25 @@ cBoxToBox :: Ptr BOX -> IO Box
 cBoxToBox c = liftM4 Box (cBoxX c) (cBoxY c) (cBoxW c) (cBoxH c)
 
 -- | boxarray, index, access flag
-{# fun boxaGetBox as ^ {id `BOXA', fromIntegral `Int', fromIntegral `Int'} -> `BOX' id #}
+{# fun boxaGetBox as ^ {id `BOXA', `Int', `Int'} -> `BOX' id #}
 
+-- *** PIX stuff
+
+-- | Numeric format flags.  This is quite brittle and may break in tesseract
+--   versions after 3.02
+data PIX_IFF  = IFF_UNKNOWN {- 0 -}  | IFF_BMP {- 1 -}       | IFF_JFIF_JPEG {- 2 -}
+              | IFF_PNG {- 3 -}      | IFF_TIFF {- 4 -}      | IFF_TIFF_PACKBITS {- 5 -} 
+              | IFF_TIFF_RLE {- 6 -} | IFF_TIFF_G3 {- 7 -}   | IFF_TIFF_G4 {- 8 -}
+              | IFF_TIFF_LZW {- 9 -} | IFF_TIFF_ZIP {- 10 -} | IFF_PNM {- 11 -}
+              | IFF_PS {- 12 -}      | IFF_GIF {- 13 -}      | IFF_JP2 {- 14 -}
+              | IFF_WEBP {- 15 -}    | IFF_LPDF {- 16 -}     | IFF_DEFAULT {- 17 -}
+              | IFF_SPIX {- 18 -}
+              deriving (Show, Eq, Ord, Enum, Read) 
+
+pixIffToInt :: PIX_IFF -> CInt; pixIffToInt = fromIntegral . fromEnum
+
+-- | path, pix, format
+{# fun pixWrite as ^ {`String', id `PIX', pixIffToInt `PIX_IFF'} -> `Int' #}
 {# fun pixRead as ^ {`String'} -> `PIX' id #}
 
 -- | second argument is size
@@ -83,6 +98,9 @@ cBoxToBox c = liftM4 Box (cBoxX c) (cBoxY c) (cBoxW c) (cBoxH c)
   , fromIntegral `Int' } -> `PIX' id #}
 
 {# fun pixClone as ^ {id `PIX'} -> `PIX' id #}
+{# fun pixConvertRGBToGrayFast as ^ {id `PIX'} -> `PIX' id #}
+{# fun pixGetDepth as ^ {id `PIX'} -> `Int' fromIntegral #}
+{# fun pixaCreate as ^ {`Int'} -> `PIXA' id #}
 
 
 {# fun pixConnComp as ^
@@ -91,10 +109,7 @@ cBoxToBox c = liftM4 Box (cBoxX c) (cBoxY c) (cBoxW c) (cBoxH c)
   , fromIntegral `Int'
   } -> `BOXA' id #}
 
-{# fun pixConnCompBB as ^
-  { id `PIX'
-  , fromIntegral `Int'
-  } -> `BOXA' id #}
+{# fun pixConnCompBB as ^ { id `PIX' , fromIntegral `Int' } -> `BOXA' id #}
 
 -- ** Image Processing
 

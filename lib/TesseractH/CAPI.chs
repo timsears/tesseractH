@@ -1,6 +1,56 @@
 {-# LANGUAGE CPP #-}
 {-# LANGUAGE ForeignFunctionInterface #-}
-module TesseractH.CAPI where
+module TesseractH.CAPI 
+
+  ( BOXA
+  , Box (..)
+  , PIX
+  , PIXA
+  , PIX_IFF (..)
+  , TessBaseAPI (..)
+  , TessOcrEngineMode (..)
+  , TessOrientation (..)
+  , TessPageIteratorLevel (..)
+  , TessPageSegMode (..)
+  , TessPolyBlockType (..)
+  , TessTextlineOrder (..)
+  , TessWritingDirection (..)
+  , boxaCreate
+  , boxaGetBox
+  , boxaGetCount
+  , cBoxH
+  , cBoxToBox
+  , cBoxW
+  , cBoxX
+  , cBoxY
+  , cIntFromEnum
+  , cIntToEnum
+  , pixClone
+  , pixConnComp
+  , pixConnCompBB
+  , pixConvertRGBToGrayFast
+  , pixGetDepth
+  , pixIffToInt
+  , pixOtsuAdaptiveThreshold
+  , pixRead
+  , pixReadMemJpeg
+  , pixReadMemPng
+  , pixWrite
+  , pixaCreate
+  , tessBaseAPICreate
+  , tessBaseAPIDelete
+  , tessBaseAPIGetHOCRText
+  , tessBaseAPIGetUTF8Text
+  , tessBaseAPIInit2
+  , tessBaseAPISetImage
+  , tessBaseAPISetImage2
+  , tessBaseAPISetInputName
+  , tessBaseAPISetOutputName
+  , tessBaseAPISetPageSegMode
+  , tessBaseAPISetRectangle
+  , tessVersion
+  )
+where
 
 import qualified Data.Text as T
 import Foreign
@@ -102,11 +152,14 @@ pixIffToInt :: PIX_IFF -> CInt; pixIffToInt = fromIntegral . fromEnum
 {# fun pixGetDepth as ^ {id `PIX'} -> `Int' fromIntegral #}
 {# fun pixaCreate as ^ {`Int'} -> `PIXA' id #}
 
+data Connectivity = FourWay | EightWay deriving (Show, Eq, Read) 
+connToInt :: Integral integral => Connectivity -> integral
+connToInt FourWay = 4; connToInt _ = 8
 
 {# fun pixConnComp as ^
   { id `PIX'
   , id `Ptr PIXA'
-  , fromIntegral `Int'
+  , connToInt `Connectivity'
   } -> `BOXA' id #}
 
 {# fun pixConnCompBB as ^ { id `PIX' , fromIntegral `Int' } -> `BOXA' id #}
@@ -206,17 +259,10 @@ pixIffToInt :: PIX_IFF -> CInt; pixIffToInt = fromIntegral . fromEnum
   fromIntegral `Int'  -- heigth
   } -> `()' #}
 
-{# fun TessBaseAPIGetUTF8Text as ^
-{ id `TessBaseAPI'
-  } -> `String' #}
+{# fun TessBaseAPIGetUTF8Text as ^ { id `TessBaseAPI' } -> `String' #}
 
-
-{# fun TessBaseAPIGetHOCRText as ^
-{ id `TessBaseAPI',
-  fromIntegral `Int' -- ^ page number
-  } -> `String' #}
-
-
+-- | int is the page number
+{# fun TessBaseAPIGetHOCRText as ^ { id `TessBaseAPI', fromIntegral `Int' } -> `String' #}
 
 -- {# fun TesssBaseAPISetImage2 as ^
 -- { id `TessBaseAPI',

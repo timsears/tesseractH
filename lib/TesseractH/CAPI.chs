@@ -145,6 +145,8 @@ cBoxToBox c = liftM4 Box (cBoxX c) (cBoxY c) (cBoxW c) (cBoxH c)
 {# fun TessBaseAPISetOutputName as ^ {id `TessBaseAPI',
                                      `String'} -> `()' #}
 
+
+
 -- | baseAPI, datapath, langauge, mode
 {# fun TessBaseAPIInit2 as ^
 { id `TessBaseAPI',
@@ -201,7 +203,14 @@ cBoxToBox c = liftM4 Box (cBoxX c) (cBoxY c) (cBoxW c) (cBoxH c)
   fromIntegral `Int' -- ^ page number
   } -> `String' #}
 
+{# fun TessBaseAPISetSourceResolution as ^ 
+{ id `TessBaseAPI',
+  `Int'    -- ppi 
+} -> `()' #}
 
+{# fun TessBaseAPIMeanTextConf as ^ 
+{ id `TessBaseAPI' }
+-> `Int' #}
 
 -- {# fun TesssBaseAPISetImage2 as ^
 -- { id `TessBaseAPI',

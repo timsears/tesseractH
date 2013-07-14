@@ -1,4 +1,4 @@
-haskTesseract
+tesseractH
 =============
 
 Haskell binding to tesseract C API.

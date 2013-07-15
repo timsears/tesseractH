@@ -97,5 +97,5 @@ withSauvola settings pix fxn = do
                                  (ssAddBorder settings)
                                  nullPtr nullPtr nullPtr sauvRes
         case res of
-            0 -> undefined -- peek sauvRes >>= fxn
+            0 -> peek sauvRes >>= fxn
             _ -> return $ Left $ pack "Error running sauv threshold on pix"

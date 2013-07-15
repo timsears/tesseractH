@@ -85,7 +85,7 @@ cIntToEnum = toEnum . fromIntegral
 {# fun boxaCreate as ^ {fromIntegral `Int'} -> `BOXA' id #}
 {# fun boxaGetCount as ^ {id `BOXA'} -> `Int' fromIntegral #}
 
-data Box = Box { x :: Int, y :: Int, w :: Int, h :: Int} deriving (Show, Eq, Ord, Read) 
+data Box = Box { boxX :: Int, boxY :: Int, boxW :: Int, boxH :: Int} deriving (Show, Eq, Ord, Read) 
 
 cBoxW :: BOX -> IO Int
 cBoxW b = fmap fromIntegral $ {#get BOX -> w#} b

@@ -57,9 +57,9 @@ withOtsu os pix fxn = do
                 res <- otsu nullPtr otsuRes
                 case res of
                     0 -> peek otsuRes >>= fxnJustRes >>= return . Right
-                    1 -> return $ Left $ pack "Error running otsu threshold on pix"
+                    _ -> return $ Left $ pack "Error running otsu threshold on pix"
             Left fxnWithThres -> alloca $ \thresholds -> do
                 res <- otsu thresholds otsuRes
                 case res of
                     0 -> (liftM2 (,) (peek thresholds) (peek otsuRes)) >>= fxnWithThres >>= return . Right
-                    1 -> return $ Left $ pack "Error running otsu threshold on pix"
+                    _ -> return $ Left $ pack "Error running otsu threshold on pix"

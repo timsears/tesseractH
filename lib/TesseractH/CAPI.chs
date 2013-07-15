@@ -1,5 +1,6 @@
 {-# LANGUAGE CPP #-}
 {-# LANGUAGE ForeignFunctionInterface #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 module TesseractH.CAPI 
 
   ( BOXA
@@ -16,18 +17,12 @@ module TesseractH.CAPI
   , TessTextlineOrder (..)
   , TessWritingDirection (..)
   , boxaCreate
-  , boxaGetBox
-  , boxaGetCount
-  , cBoxH
-  , cBoxToBox
-  , cBoxW
-  , cBoxX
-  , cBoxY
-  , cIntFromEnum
-  , cIntToEnum
+  , ACCESS_TYPE (..) , boxaGetBox , boxaGetCount
+  , pixaGetPix , pixaGetBox , pixaGetCount
+  , cBoxH , cBoxToBox , cBoxW , cBoxX , cBoxY
+  , cIntFromEnum , cIntToEnum
   , pixClone
-  , pixConnComp
-  , pixConnCompBB
+  , pixConnComp , pixConnCompBB, Connectivity (..)
   , pixConvertRGBToGrayFast
   , pixGetDepth
   , pixIffToInt
@@ -37,6 +32,8 @@ module TesseractH.CAPI
   , pixReadMemPng
   , pixWrite
   , pixaCreate
+  , pixRasterop , PIX_RASTEROP
+  , pix_clr , pix_src , pix_dst , pix_set , pix_not , pix_xor , pix_subtract
   , tessBaseAPICreate
   , tessBaseAPIDelete
   , tessBaseAPIGetHOCRText
@@ -53,6 +50,7 @@ module TesseractH.CAPI
 where
 
 import qualified Data.Text as T
+import Data.Bits
 import Foreign
 import Foreign.C
 import Control.Monad (liftM4)
@@ -87,23 +85,23 @@ cIntToEnum = toEnum . fromIntegral
 
 data Box = Box { x :: Int, y :: Int, w :: Int, h :: Int} deriving (Show, Eq, Ord, Read) 
 
-cBoxW :: Ptr BOX -> IO Int
+cBoxW :: BOX -> IO Int
 cBoxW b = fmap fromIntegral $ {#get BOX -> w#} b
 
-cBoxH :: Ptr BOX -> IO Int
+cBoxH :: BOX -> IO Int
 cBoxH b = fmap fromIntegral $ {#get BOX -> h#} b
 
-cBoxX :: Ptr BOX -> IO Int
+cBoxX :: BOX -> IO Int
 cBoxX b = fmap fromIntegral $ {#get BOX -> x#} b
 
-cBoxY :: Ptr BOX -> IO Int
+cBoxY :: BOX -> IO Int
 cBoxY b = fmap fromIntegral $ {#get BOX -> y#} b
 
-cBoxToBox :: Ptr BOX -> IO Box
+cBoxToBox :: BOX -> IO Box
 cBoxToBox c = liftM4 Box (cBoxX c) (cBoxY c) (cBoxW c) (cBoxH c)
 
 -- | boxarray, index, access flag
-{# fun boxaGetBox as ^ {id `BOXA', `Int', `Int'} -> `BOX' id #}
+{# fun boxaGetBox as ^ {id `BOXA', `Int', cIntFromEnum `ACCESS_TYPE'} -> `BOX' id #}
 
 -- *** PIX stuff
 
@@ -152,6 +150,23 @@ pixIffToInt :: PIX_IFF -> CInt; pixIffToInt = fromIntegral . fromEnum
 {# fun pixGetDepth as ^ {id `PIX'} -> `Int' fromIntegral #}
 {# fun pixaCreate as ^ {`Int'} -> `PIXA' id #}
 
+-- Access type
+
+--  enum {
+--      L_INSERT = 0,     /* stuff it in; no copy, clone or copy-clone    */
+--      L_COPY = 1,       /* make/use a copy of the object                */
+--       L_CLONE = 2,      /* make/use clone (ref count) of the object     */
+--      L_COPY_CLONE = 3  /* make a new object and fill with with clones  */
+--                        /* of each object in the array(s)               */
+--  };
+
+data ACCESS_TYPE = L_INSERT | L_COPY | L_CLONE | L_COPY_CLONE
+  deriving (Show, Eq, Ord, Enum, Read) 
+
+{# fun pixaGetCount as ^ {id `PIXA'} -> `Int' fromIntegral #}
+{# fun pixaGetBox as ^ {id `PIXA', `Int', `Int'} -> `BOX' id #}
+{# fun pixaGetPix as ^ {id `PIXA', fromIntegral `Int', cIntFromEnum `ACCESS_TYPE' } -> `PIX' id #}
+
 data Connectivity = FourWay | EightWay deriving (Show, Eq, Read) 
 connToInt :: Integral integral => Connectivity -> integral
 connToInt FourWay = 4; connToInt _ = 8
@@ -193,7 +208,75 @@ connToInt FourWay = 4; connToInt _ = 8
   , id `Ptr PIX'
   , id `Ptr PIX'
   } -> `Int' fromIntegral #}
--- LEPT_DLL extern l_int32 pixOtsuAdaptiveThreshold ( PIX *pixs, l_int32 sx, l_int32 sy, l_int32 smoothx, l_int32 smoothy, l_float32 scorefract, PIX **ppixth, PIX **ppixd );
+
+-- | sauvola
+--   l_int32 pixSauvolaBinarize ( PIX *pixs, l_int32 whsize, l_float32 factor, l_int32 addborder, PIX **ppixm, PIX **ppixsd, PIX **ppixth, PIX **ppixd );
+--   1. destination pix
+-- 
+--   1. whsize
+-- 
+--   1. factor
+-- 
+--   1. 
+-- 
+{# fun pixSauvolaBinarize  as ^
+  { id `PIX'
+  , fromIntegral `Int'
+  , CFloat `Float'
+  , fromIntegral `Int'
+  , id `Ptr PIX'
+  , id `Ptr PIX'
+  , id `Ptr PIX'
+  , id `Ptr PIX' -- dest
+  } -> `Int' fromIntegral #}
+
+
+-- | from the definitions in pix.h around line 260
+newtype PIX_RASTEROP = PIX_RASTEROP_ { rasterOpToCInt :: CInt }
+  deriving (Show, Eq,  Bits)
+    
+pix_clr :: PIX_RASTEROP; pix_clr = PIX_RASTEROP_ 0
+pix_src :: PIX_RASTEROP; pix_src = PIX_RASTEROP_ 0x18
+pix_dst :: PIX_RASTEROP; pix_dst = PIX_RASTEROP_ 0x14
+pix_set :: PIX_RASTEROP; pix_set = PIX_RASTEROP_ 0x1e
+pix_not :: PIX_RASTEROP -> PIX_RASTEROP; pix_not op = op `xor` PIX_RASTEROP_ 0xf
+pix_xor :: PIX_RASTEROP; pix_xor = pix_src `xor` pix_dst
+pix_subtract :: PIX_RASTEROP; pix_subtract  = pix_dst .&. (pix_not pix_src)
+
+
+-- l_int32 pixRasterop ( PIX *pixd, l_int32 dx, l_int32 dy, l_int32 dw, l_int32 dh, l_int32 op, PIX *pixs, l_int32 sx, l_int32 sy );
+
+-- | args:
+--
+-- 1. pix dst
+-- 
+-- 1. dst x
+-- 
+-- 1. dst y
+-- 
+-- 1. dst width
+-- 
+-- 1. dst hgt
+-- 
+-- 1. op
+-- 
+-- 1. pix src
+-- 
+-- 1. src x
+-- 
+-- 1. srx y
+{# fun pixRasterop  as ^
+  { id `PIX'
+  , fromIntegral `Int'
+  , fromIntegral `Int'
+  , fromIntegral `Int'
+  , fromIntegral `Int'
+  , rasterOpToCInt `PIX_RASTEROP' -- op
+  , id `PIX'
+  , fromIntegral `Int'
+  , fromIntegral `Int'
+  } -> `Int' fromIntegral #}
+
 -- ** Tesseract
 {# enum TessOcrEngineMode as ^ {} deriving (Show, Eq) #}
 {# enum TessPageSegMode as ^ {} deriving (Show, Eq) #}

@@ -1,5 +1,16 @@
 {-# LANGUAGE RecordWildCards #-}
-module TesseractH where
+module TesseractH 
+    ( module TesseractH.CAPI
+    , version
+    , SauvolaSettings
+    , Default
+    , OtsuSettings
+    , Default
+    , PIX_TH
+    , withConnComp
+    , withOtsu
+    , withSauvola
+    ) where
 
 import Control.Arrow ((&&&))
 import Control.Monad (forM)

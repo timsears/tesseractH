@@ -36,11 +36,18 @@ instance Default OtsuSettings where def = OtsuSettings 100 100 1 1 0.1
 
 type PIX_TH = PIX
 
-withConnComp :: Connectivity -> PIX -> (BOXA -> PIXA -> IO a) -> IO a
+-- | Note that this uses L_CLONE access type so that for now any changes
+--   to the pix and box list are a bad thing.  will move to taking
+--   this as an arugment
+withConnComp :: Connectivity -> PIX -> ( [(Box ,PIX) ] -> IO a) -> IO a
 withConnComp conn pix fxn = alloca $ \pixaPtr -> do
     boxa <- pixConnComp pix pixaPtr conn
     pixa <- peek pixaPtr
-    fxn boxa pixa
+    len <- boxaGetCount boxa
+    boxPixList  <- flip mapM [0 .. len -1] $ \idx -> liftM2 (,)
+        (boxaGetBox boxa idx L_CLONE >>= cBoxToBox)
+        (pixaGetPix pixa idx L_CLONE)
+    fxn boxPixList
 
 -- | Note that the inner function uses `alloca` so the
 --   ((PIX, PIX) -> IO a) function cannot return something that

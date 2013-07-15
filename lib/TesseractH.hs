@@ -16,6 +16,14 @@ import Data.Text (Text, pack)
 
 version = tessVersion
 
+data SauvolaSettings = SauvolaSettings
+    { ssWindowSize      :: Int
+    , ssFactor          :: Float
+    , ssAddBorder       :: Int
+    } deriving (Show, Eq, Ord, Read)
+
+instance Default SauvolaSettings where def = SauvolaSettings 16 0.25 1
+
 data OtsuSettings = OtsuSettings
     { osTileWidth       :: Int
     , osTileHeight      :: Int
@@ -40,7 +48,7 @@ withConnComp conn pix fxn = alloca $ \pixaPtr -> do
 withOtsu
     :: OtsuSettings
     -> PIX
-    -> Either ((PIX_TH, PIX) -> IO a) (PIX -> IO a)
+    -> Either ((PIX_TH, PIX) -> IO (Either Text a)) (PIX -> IO (Either Text a))
     -> IO (Either Text a)
 withOtsu os pix fxn = do
     -- in this case, we need the thresholds
@@ -56,10 +64,31 @@ withOtsu os pix fxn = do
             Right fxnJustRes -> do
                 res <- otsu nullPtr otsuRes
                 case res of
-                    0 -> peek otsuRes >>= fxnJustRes >>= return . Right
+                    0 -> peek otsuRes >>= fxnJustRes
                     _ -> return $ Left $ pack "Error running otsu threshold on pix"
             Left fxnWithThres -> alloca $ \thresholds -> do
                 res <- otsu thresholds otsuRes
                 case res of
-                    0 -> (liftM2 (,) (peek thresholds) (peek otsuRes)) >>= fxnWithThres >>= return . Right
+                    0 -> (liftM2 (,) (peek thresholds) (peek otsuRes)) >>= fxnWithThres
                     _ -> return $ Left $ pack "Error running otsu threshold on pix"
+
+-- | Note that the inner function uses `alloca` so the
+--   ((PIX, PIX) -> IO a) function cannot return something that
+--   uses the memory of the (PIX,PIX) tuple as that will be freed.
+withSauvola
+    :: SauvolaSettings
+    -> PIX
+    -> (PIX -> IO (Either Text a))
+    -> IO (Either Text a)
+withSauvola settings pix fxn = do
+    -- in this case, we need the thresholds
+    grayPix <- pixConvertRGBToGrayFast pix
+    alloca $ \sauvRes -> do
+        res <- pixSauvolaBinarize grayPix
+                                 (ssWindowSize settings)
+                                 (ssFactor settings)
+                                 (ssAddBorder settings)
+                                 nullPtr nullPtr nullPtr sauvRes
+        case res of
+            0 -> undefined -- peek sauvRes >>= fxn
+            _ -> return $ Left $ pack "Error running sauv threshold on pix"

@@ -26,7 +26,9 @@ module TesseractH.CAPI
   , pixConvertRGBToGrayFast
   , pixGetDepth
   , pixIffToInt
+  -- ** binarization stuff
   , pixOtsuAdaptiveThreshold
+  , pixSauvolaBinarize
   , pixRead
   , pixReadMemJpeg
   , pixReadMemPng

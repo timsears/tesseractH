@@ -1,7 +1,6 @@
 {-# LANGUAGE RecordWildCards #-}
 module TesseractH 
-    ( module TesseractH.CAPI
-    , version
+    ( version
     , SauvolaSettings
     , Default
     , OtsuSettings

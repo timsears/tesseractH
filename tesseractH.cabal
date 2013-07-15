@@ -27,4 +27,4 @@ Library
   ghc-options:     -Wall 
   cc-options:      -U__BLOCKS__
   Other-modules: 
-  Extra-libraries: tesseract
+  Extra-libraries: tesseract, lept

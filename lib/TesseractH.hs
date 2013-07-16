@@ -113,7 +113,7 @@ withSauvola settings pix fxn = do
         _ -> return . Left . pack $ "Pix depth not 8 or 32. is: " <> show depth
   where
     withGrayPix grayPix = do
-        pixWrite "/tmp/grayix.png" grayPix IFF_PNG -- _DEBUG
+        -- pixWrite "/tmp/grayix.png" grayPix IFF_PNG -- _DEBUG
         alloca $ \sauvRes -> do
             res <- pixSauvolaBinarize grayPix
                                      (ssWindowSize settings)
@@ -121,5 +121,6 @@ withSauvola settings pix fxn = do
                                      (ssAddBorder settings)
                                      nullPtr nullPtr nullPtr sauvRes
             case res of
-                0 -> peek sauvRes >>= \p -> pixWrite "/tmp/sr.png" p IFF_PNG >> fxn p
+                0 -> peek sauvRes >>= fxn
+                -- 0 -> peek sauvRes >>= \p -> pixWrite "/tmp/sr.png" p IFF_PNG >> fxn p
                 _ -> return $ Left $ pack "Error running sauv threshold on pix"

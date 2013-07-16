@@ -1,5 +1,5 @@
 {-# LANGUAGE RecordWildCards #-}
-module TesseractH 
+module TesseractH
     ( version
     , SauvolaSettings
     , Default
@@ -22,6 +22,7 @@ import TesseractH.CAPI
 import Data.Default (Default (..))
 import Control.Monad (liftM2)
 import Data.Text (Text, pack)
+import Data.Monoid ((<>))
 --import Text.Print
 
 version = tessVersion
@@ -69,25 +70,31 @@ withOtsu
     -> IO (Either Text a)
 withOtsu os pix fxn = do
     -- in this case, we need the thresholds
-    grayPix <- pixConvertRGBToGrayFast pix
-    let otsu ptrPixTh ptrPixDest =
-            pixOtsuAdaptiveThreshold grayPix
-                                     (osTileWidth os) (osTileHeight os)
-                                     (osSmoothX os) (osSmoothY os)
-                                     (osScoreFract os)
-                                     ptrPixTh ptrPixDest
-    alloca $ \otsuRes -> do
-        case fxn of
-            Right fxnJustRes -> do
-                res <- otsu nullPtr otsuRes
-                case res of
-                    0 -> peek otsuRes >>= fxnJustRes
-                    _ -> return $ Left $ pack "Error running otsu threshold on pix"
-            Left fxnWithThres -> alloca $ \thresholds -> do
-                res <- otsu thresholds otsuRes
-                case res of
-                    0 -> (liftM2 (,) (peek thresholds) (peek otsuRes)) >>= fxnWithThres
-                    _ -> return $ Left $ pack "Error running otsu threshold on pix"
+    depth <- pixGetDepth pix
+    case depth of
+        8 -> pixRemoveColormap pix REMOVE_CMAP_TO_GRAYSCALE >>= withGrayPix
+        32 -> pixConvertRGBToGrayFast pix >>= withGrayPix
+        _ -> return . Left . pack $ "Pix depth not 8 or 32. is: " <> show depth
+  where
+    withGrayPix grayPix = do
+        let otsu ptrPixTh ptrPixDest =
+                pixOtsuAdaptiveThreshold grayPix
+                                         (osTileWidth os) (osTileHeight os)
+                                         (osSmoothX os) (osSmoothY os)
+                                         (osScoreFract os)
+                                         ptrPixTh ptrPixDest
+        alloca $ \otsuRes -> do
+            case fxn of
+                Right fxnJustRes -> do
+                    res <- otsu nullPtr otsuRes
+                    case res of
+                        0 -> peek otsuRes >>= fxnJustRes
+                        _ -> return $ Left $ pack "Error running otsu threshold on pix"
+                Left fxnWithThres -> alloca $ \thresholds -> do
+                    res <- otsu thresholds otsuRes
+                    case res of
+                        0 -> (liftM2 (,) (peek thresholds) (peek otsuRes)) >>= fxnWithThres
+                        _ -> return $ Left $ pack "Error running otsu threshold on pix"
 
 -- | Note that the inner function uses `alloca` so the
 --   ((PIX, PIX) -> IO a) function cannot return something that
@@ -99,13 +106,20 @@ withSauvola
     -> IO (Either Text a)
 withSauvola settings pix fxn = do
     -- in this case, we need the thresholds
-    grayPix <- pixConvertRGBToGrayFast pix
-    alloca $ \sauvRes -> do
-        res <- pixSauvolaBinarize grayPix
-                                 (ssWindowSize settings)
-                                 (ssFactor settings)
-                                 (ssAddBorder settings)
-                                 nullPtr nullPtr nullPtr sauvRes
-        case res of
-            0 -> peek sauvRes >>= fxn
-            _ -> return $ Left $ pack "Error running sauv threshold on pix"
+    depth <- pixGetDepth pix
+    case depth of
+        8 -> pixRemoveColormap pix REMOVE_CMAP_TO_GRAYSCALE >>= withGrayPix
+        32 -> pixConvertRGBToGrayFast pix >>= withGrayPix
+        _ -> return . Left . pack $ "Pix depth not 8 or 32. is: " <> show depth
+  where
+    withGrayPix grayPix = do
+        pixWrite "/tmp/grayix.png" grayPix IFF_PNG -- _DEBUG
+        alloca $ \sauvRes -> do
+            res <- pixSauvolaBinarize grayPix
+                                     (ssWindowSize settings)
+                                     (ssFactor settings)
+                                     (ssAddBorder settings)
+                                     nullPtr nullPtr nullPtr sauvRes
+            case res of
+                0 -> peek sauvRes >>= \p -> pixWrite "/tmp/sr.png" p IFF_PNG >> fxn p
+                _ -> return $ Left $ pack "Error running sauv threshold on pix"

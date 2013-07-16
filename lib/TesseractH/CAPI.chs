@@ -29,6 +29,7 @@ module TesseractH.CAPI
   -- ** binarization stuff
   , pixOtsuAdaptiveThreshold
   , pixSauvolaBinarize
+  , pixRemoveColormap, REMOVE_CMAP (..)
   , pixRead
   , pixReadMemJpeg
   , pixReadMemPng
@@ -168,6 +169,15 @@ data ACCESS_TYPE = L_INSERT | L_COPY | L_CLONE | L_COPY_CLONE
 {# fun pixaGetCount as ^ {id `PIXA'} -> `Int' fromIntegral #}
 {# fun pixaGetBox as ^ {id `PIXA', `Int', `Int'} -> `BOX' id #}
 {# fun pixaGetPix as ^ {id `PIXA', fromIntegral `Int', cIntFromEnum `ACCESS_TYPE' } -> `PIX' id #}
+
+data REMOVE_CMAP
+  = REMOVE_CMAP_TO_BINARY-- = 0,
+  | REMOVE_CMAP_TO_GRAYSCALE-- = 1,
+  | REMOVE_CMAP_TO_FULL_COLOR-- = 2,
+  | REMOVE_CMAP_BASED_ON_SRC-- = 3
+  deriving (Show, Eq, Ord, Enum, Read) 
+
+{# fun pixRemoveColormap as ^ {id `PIX', cIntFromEnum `REMOVE_CMAP'} -> `PIX' id #}
 
 data Connectivity = FourWay | EightWay deriving (Show, Eq, Read) 
 connToInt :: Integral integral => Connectivity -> integral

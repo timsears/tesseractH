@@ -8,6 +8,7 @@ import Foreign.C
 import Foreign.C.Types()
 import Control.Monad (liftM4)
 import Control.Monad (liftM4)
+import Control.Applicative ((<$>))
 
 #include <tesseract/capi.h>
 -- #include <leptonica/environ.h>
@@ -109,9 +110,57 @@ cBoxToBox c = liftM4 Box (cBoxX c) (cBoxY c) (cBoxW c) (cBoxH c)
 
 {# fun pixSetData as ^
   { id `PIX' -- ^ pix
-  ,  id `Ptr CUInt' -- ^ data
+  , id `Ptr CUInt' -- ^ data
   } -> `Int' fromIntegral #}
 
+{# fun pixGetWpl as ^
+  { id `PIX' -- ^ pix
+  } -> `Int' fromIntegral #}
+
+{# fun pixGetRefcount as pixGetRefCount
+  { id `PIX' -- ^ pix
+  } -> `Int' fromIntegral #}
+
+{# fun pixGetInputFormat as ^
+  { id `PIX' -- ^ pix
+  } -> `Int' fromIntegral #}
+
+{# fun pixSetWpl as ^
+  { id `PIX' -- ^ pix
+  ,  fromIntegral `Int'
+  } -> `Int' fromIntegral #}
+
+nullPointer = const nullPtr
+
+{# fun pixConvert1To8 as ^ 
+  { nullPointer `PIX'  -- ^ pixd -- null trigers new PIX 
+  , id `PIX'  -- ^ pixs
+  , fromIntegral `CChar' -- ^ val0 -- use 0
+  , fromIntegral `CChar' -- ^ val1 -- 255
+  } -> `PIX' id #}
+
+
+{# fun pixWriteJpeg as ^
+  { `String' -- ^ filename
+  , id `PIX' -- ^ pix
+  , fromIntegral `Int' -- ^ quality
+  , fromIntegral `Int' -- ^ progressive
+  } -> `Int' fromIntegral #}
+
+peekInt c = fromIntegral <$> peek c
+ 
+{# fun pixGetDimensions as ^
+  { id `PIX' -- ^ pix
+  , alloca- `Int' peekInt* -- ^ pw
+  , alloca- `Int' peekInt* -- ^ ph
+  , alloca- `Int' peekInt* -- ^ pd
+  } -> `Int' fromIntegral #}
+
+{# fun pixGetResolution as ^
+  { id `PIX' -- ^ pix
+  , alloca- `Int' peekInt* -- ^ pxres
+  , alloca- `Int' peekInt* -- ^ pyres
+  } -> `Int' fromIntegral #}
 
 -- ** Image Processing
 

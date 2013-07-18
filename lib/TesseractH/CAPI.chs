@@ -35,6 +35,8 @@ cIntToEnum = toEnum . fromIntegral
 {# pointer *BOX as BOX -> Box #}
 {# pointer *BOXA  #}
 
+newtype PtrHandle = PtrHandle (Ptr PIX)
+
 {# fun boxaCreate as ^ {fromIntegral `Int'} -> `BOXA' id #}
 {# fun boxaGetCount as ^ {id `BOXA'} -> `Int' fromIntegral #}
 
@@ -102,6 +104,10 @@ cBoxToBox c = liftM4 Box (cBoxX c) (cBoxY c) (cBoxW c) (cBoxH c)
   , fromIntegral `Int' -- ^ depth
   } -> `PIX' id #}
 
+{# fun pixDestroy as ^ 
+  { alloca- `Ptr PIX' 
+  } -> `()' id #}
+
 {# fun pixCreateNoInit as ^ 
   { fromIntegral `Int' -- ^ width
   , fromIntegral `Int' -- ^ height
@@ -139,12 +145,25 @@ nullPointer = const nullPtr
   , fromIntegral `CChar' -- ^ val1 -- 255
   } -> `PIX' id #}
 
+{# fun pixEndianByteSwapNew as ^ 
+  { id `PIX'
+    } -> `PIX' id #}
+
+{# fun pixEndianByteSwap as ^ 
+  { id `PIX' id
+    } -> `Int' fromIntegral #}
 
 {# fun pixWriteJpeg as ^
   { `String' -- ^ filename
   , id `PIX' -- ^ pix
   , fromIntegral `Int' -- ^ quality
   , fromIntegral `Int' -- ^ progressive
+  } -> `Int' fromIntegral #}
+
+{# fun pixWritePng as ^
+  { `String' -- ^ filename
+  , id `PIX' -- ^ pix
+  , realToFrac `CFloat' -- ^ gamma
   } -> `Int' fromIntegral #}
 
 peekInt c = fromIntegral <$> peek c

@@ -1,4 +1,5 @@
 {-# LANGUAGE CPP #-}
+{-# LANGUAGE EmptyDataDecls #-}
 {-# LANGUAGE ForeignFunctionInterface #-}
 module TesseractH.CAPI where
 
@@ -35,7 +36,8 @@ cIntToEnum = toEnum . fromIntegral
 {# pointer *BOX as BOX -> Box #}
 {# pointer *BOXA  #}
 
-newtype PtrHandle = PtrHandle (Ptr PIX)
+type PIXHandle = Ptr PIX
+
 
 {# fun boxaCreate as ^ {fromIntegral `Int'} -> `BOXA' id #}
 {# fun boxaGetCount as ^ {id `BOXA'} -> `Int' fromIntegral #}
@@ -98,14 +100,25 @@ cBoxToBox c = liftM4 Box (cBoxX c) (cBoxY c) (cBoxW c) (cBoxH c)
   , fromIntegral `Int'
   } -> `BOXA' id #}
 
+toHandle' pix =  alloca (\h -> do 
+                            poke h pix
+                            return h)
+
+toHandle pix = (\h -> do 
+                   poke h pix
+                   return h)               
+               
 {# fun pixCreate as ^ 
   { fromIntegral `Int' -- ^ width
   , fromIntegral `Int' -- ^ height
   , fromIntegral `Int' -- ^ depth
   } -> `PIX' id #}
 
+-- | similar to passing &pix to pixDestroy 
+--pixDestroyPIX pix = with pix pixDestroy
+
 {# fun pixDestroy as ^ 
-  { alloca- `Ptr PIX' 
+  { id `PIXHandle' 
   } -> `()' id #}
 
 {# fun pixCreateNoInit as ^ 
@@ -150,7 +163,7 @@ nullPointer = const nullPtr
     } -> `PIX' id #}
 
 {# fun pixEndianByteSwap as ^ 
-  { id `PIX' id
+  { id `PIX'
     } -> `Int' fromIntegral #}
 
 {# fun pixWriteJpeg as ^

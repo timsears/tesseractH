@@ -1,12 +1,61 @@
 {-# LANGUAGE CPP #-}
 {-# LANGUAGE ForeignFunctionInterface #-}
-module TesseractH.CAPI where
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
+module TesseractH.CAPI 
+
+  ( BOXA
+  , Box (..)
+  , PIX
+  , PIXA
+  , PIX_IFF (..)
+  , TessBaseAPI (..)
+  , TessOcrEngineMode (..)
+  , TessOrientation (..)
+  , TessPageIteratorLevel (..)
+  , TessPageSegMode (..)
+  , TessPolyBlockType (..)
+  , TessTextlineOrder (..)
+  , TessWritingDirection (..)
+  , boxaCreate
+  , ACCESS_TYPE (..) , boxaGetBox , boxaGetCount
+  , pixaGetPix , pixaGetBox , pixaGetCount
+  , cBoxH , cBoxToBox , cBoxW , cBoxX , cBoxY
+  , cIntFromEnum , cIntToEnum
+  , pixClone
+  , pixConnComp , pixConnCompBB, Connectivity (..)
+  , pixConvertRGBToGrayFast
+  , pixGetDepth
+  , pixIffToInt
+  -- ** binarization stuff
+  , pixOtsuAdaptiveThreshold
+  , pixSauvolaBinarize
+  , pixRemoveColormap, REMOVE_CMAP (..)
+  , pixRead
+  , pixReadMemJpeg
+  , pixReadMemPng
+  , pixWrite
+  , pixaCreate
+  , pixRasterop , PIX_RASTEROP
+  , pix_clr , pix_src , pix_dst , pix_set , pix_not , pix_xor , pix_subtract
+  , tessBaseAPICreate
+  , tessBaseAPIDelete
+  , tessBaseAPIGetHOCRText
+  , tessBaseAPIGetUTF8Text
+  , tessBaseAPIInit2
+  , tessBaseAPISetImage
+  , tessBaseAPISetImage2
+  , tessBaseAPISetInputName
+  , tessBaseAPISetOutputName
+  , tessBaseAPISetPageSegMode
+  , tessBaseAPISetRectangle
+  , tessVersion
+  )
+where
 
 import qualified Data.Text as T
+import Data.Bits
 import Foreign
 import Foreign.C
-import Foreign.C.Types()
-import Control.Monad (liftM4)
 import Control.Monad (liftM4)
 
 #include <tesseract/capi.h>
@@ -37,26 +86,43 @@ cIntToEnum = toEnum . fromIntegral
 {# fun boxaCreate as ^ {fromIntegral `Int'} -> `BOXA' id #}
 {# fun boxaGetCount as ^ {id `BOXA'} -> `Int' fromIntegral #}
 
-data Box = Box { x :: Int, y :: Int, w :: Int, h :: Int} deriving (Show, Eq, Ord, Read) 
+data Box = Box { boxX :: Int, boxY :: Int, boxW :: Int, boxH :: Int} deriving (Show, Eq, Ord, Read) 
 
-cBoxW :: Ptr BOX -> IO Int
+cBoxW :: BOX -> IO Int
 cBoxW b = fmap fromIntegral $ {#get BOX -> w#} b
 
-cBoxH :: Ptr BOX -> IO Int
+cBoxH :: BOX -> IO Int
 cBoxH b = fmap fromIntegral $ {#get BOX -> h#} b
 
-cBoxX :: Ptr BOX -> IO Int
+cBoxX :: BOX -> IO Int
 cBoxX b = fmap fromIntegral $ {#get BOX -> x#} b
 
-cBoxY :: Ptr BOX -> IO Int
+cBoxY :: BOX -> IO Int
 cBoxY b = fmap fromIntegral $ {#get BOX -> y#} b
 
-cBoxToBox :: Ptr BOX -> IO Box
+cBoxToBox :: BOX -> IO Box
 cBoxToBox c = liftM4 Box (cBoxX c) (cBoxY c) (cBoxW c) (cBoxH c)
 
 -- | boxarray, index, access flag
-{# fun boxaGetBox as ^ {id `BOXA', fromIntegral `Int', fromIntegral `Int'} -> `BOX' id #}
+{# fun boxaGetBox as ^ {id `BOXA', `Int', cIntFromEnum `ACCESS_TYPE'} -> `BOX' id #}
 
+-- *** PIX stuff
+
+-- | Numeric format flags.  This is quite brittle and may break in tesseract
+--   versions after 3.02
+data PIX_IFF  = IFF_UNKNOWN {- 0 -}  | IFF_BMP {- 1 -}       | IFF_JFIF_JPEG {- 2 -}
+              | IFF_PNG {- 3 -}      | IFF_TIFF {- 4 -}      | IFF_TIFF_PACKBITS {- 5 -} 
+              | IFF_TIFF_RLE {- 6 -} | IFF_TIFF_G3 {- 7 -}   | IFF_TIFF_G4 {- 8 -}
+              | IFF_TIFF_LZW {- 9 -} | IFF_TIFF_ZIP {- 10 -} | IFF_PNM {- 11 -}
+              | IFF_PS {- 12 -}      | IFF_GIF {- 13 -}      | IFF_JP2 {- 14 -}
+              | IFF_WEBP {- 15 -}    | IFF_LPDF {- 16 -}     | IFF_DEFAULT {- 17 -}
+              | IFF_SPIX {- 18 -}
+              deriving (Show, Eq, Ord, Enum, Read) 
+
+pixIffToInt :: PIX_IFF -> CInt; pixIffToInt = fromIntegral . fromEnum
+
+-- | path, pix, format
+{# fun pixWrite as ^ {`String', id `PIX', pixIffToInt `PIX_IFF'} -> `Int' #}
 {# fun pixRead as ^ {`String'} -> `PIX' id #}
 
 -- | second argument is size
@@ -83,18 +149,47 @@ cBoxToBox c = liftM4 Box (cBoxX c) (cBoxY c) (cBoxW c) (cBoxH c)
   , fromIntegral `Int' } -> `PIX' id #}
 
 {# fun pixClone as ^ {id `PIX'} -> `PIX' id #}
+{# fun pixConvertRGBToGrayFast as ^ {id `PIX'} -> `PIX' id #}
+{# fun pixGetDepth as ^ {id `PIX'} -> `Int' fromIntegral #}
+{# fun pixaCreate as ^ {`Int'} -> `PIXA' id #}
 
+-- Access type
+
+--  enum {
+--      L_INSERT = 0,     /* stuff it in; no copy, clone or copy-clone    */
+--      L_COPY = 1,       /* make/use a copy of the object                */
+--       L_CLONE = 2,      /* make/use clone (ref count) of the object     */
+--      L_COPY_CLONE = 3  /* make a new object and fill with with clones  */
+--                        /* of each object in the array(s)               */
+--  };
+
+data ACCESS_TYPE = L_INSERT | L_COPY | L_CLONE | L_COPY_CLONE
+  deriving (Show, Eq, Ord, Enum, Read) 
+
+{# fun pixaGetCount as ^ {id `PIXA'} -> `Int' fromIntegral #}
+{# fun pixaGetBox as ^ {id `PIXA', `Int', `Int'} -> `BOX' id #}
+{# fun pixaGetPix as ^ {id `PIXA', fromIntegral `Int', cIntFromEnum `ACCESS_TYPE' } -> `PIX' id #}
+
+data REMOVE_CMAP
+  = REMOVE_CMAP_TO_BINARY-- = 0,
+  | REMOVE_CMAP_TO_GRAYSCALE-- = 1,
+  | REMOVE_CMAP_TO_FULL_COLOR-- = 2,
+  | REMOVE_CMAP_BASED_ON_SRC-- = 3
+  deriving (Show, Eq, Ord, Enum, Read) 
+
+{# fun pixRemoveColormap as ^ {id `PIX', cIntFromEnum `REMOVE_CMAP'} -> `PIX' id #}
+
+data Connectivity = FourWay | EightWay deriving (Show, Eq, Read) 
+connToInt :: Integral integral => Connectivity -> integral
+connToInt FourWay = 4; connToInt _ = 8
 
 {# fun pixConnComp as ^
   { id `PIX'
   , id `Ptr PIXA'
-  , fromIntegral `Int'
+  , connToInt `Connectivity'
   } -> `BOXA' id #}
 
-{# fun pixConnCompBB as ^
-  { id `PIX'
-  , fromIntegral `Int'
-  } -> `BOXA' id #}
+{# fun pixConnCompBB as ^ { id `PIX' , fromIntegral `Int' } -> `BOXA' id #}
 
 -- ** Image Processing
 
@@ -125,7 +220,75 @@ cBoxToBox c = liftM4 Box (cBoxX c) (cBoxY c) (cBoxW c) (cBoxH c)
   , id `Ptr PIX'
   , id `Ptr PIX'
   } -> `Int' fromIntegral #}
--- LEPT_DLL extern l_int32 pixOtsuAdaptiveThreshold ( PIX *pixs, l_int32 sx, l_int32 sy, l_int32 smoothx, l_int32 smoothy, l_float32 scorefract, PIX **ppixth, PIX **ppixd );
+
+-- | sauvola
+--   l_int32 pixSauvolaBinarize ( PIX *pixs, l_int32 whsize, l_float32 factor, l_int32 addborder, PIX **ppixm, PIX **ppixsd, PIX **ppixth, PIX **ppixd );
+--   1. destination pix
+-- 
+--   1. whsize
+-- 
+--   1. factor
+-- 
+--   1. 
+-- 
+{# fun pixSauvolaBinarize  as ^
+  { id `PIX'
+  , fromIntegral `Int'
+  , CFloat `Float'
+  , fromIntegral `Int'
+  , id `Ptr PIX'
+  , id `Ptr PIX'
+  , id `Ptr PIX'
+  , id `Ptr PIX' -- dest
+  } -> `Int' fromIntegral #}
+
+
+-- | from the definitions in pix.h around line 260
+newtype PIX_RASTEROP = PIX_RASTEROP_ { rasterOpToCInt :: CInt }
+  deriving (Show, Eq,  Bits)
+    
+pix_clr :: PIX_RASTEROP; pix_clr = PIX_RASTEROP_ 0
+pix_src :: PIX_RASTEROP; pix_src = PIX_RASTEROP_ 0x18
+pix_dst :: PIX_RASTEROP; pix_dst = PIX_RASTEROP_ 0x14
+pix_set :: PIX_RASTEROP; pix_set = PIX_RASTEROP_ 0x1e
+pix_not :: PIX_RASTEROP -> PIX_RASTEROP; pix_not op = op `xor` PIX_RASTEROP_ 0xf
+pix_xor :: PIX_RASTEROP; pix_xor = pix_src `xor` pix_dst
+pix_subtract :: PIX_RASTEROP; pix_subtract  = pix_dst .&. (pix_not pix_src)
+
+
+-- l_int32 pixRasterop ( PIX *pixd, l_int32 dx, l_int32 dy, l_int32 dw, l_int32 dh, l_int32 op, PIX *pixs, l_int32 sx, l_int32 sy );
+
+-- | args:
+--
+-- 1. pix dst
+-- 
+-- 1. dst x
+-- 
+-- 1. dst y
+-- 
+-- 1. dst width
+-- 
+-- 1. dst hgt
+-- 
+-- 1. op
+-- 
+-- 1. pix src
+-- 
+-- 1. src x
+-- 
+-- 1. srx y
+{# fun pixRasterop  as ^
+  { id `PIX'
+  , fromIntegral `Int'
+  , fromIntegral `Int'
+  , fromIntegral `Int'
+  , fromIntegral `Int'
+  , rasterOpToCInt `PIX_RASTEROP' -- op
+  , id `PIX'
+  , fromIntegral `Int'
+  , fromIntegral `Int'
+  } -> `Int' fromIntegral #}
+
 -- ** Tesseract
 {# enum TessOcrEngineMode as ^ {} deriving (Show, Eq) #}
 {# enum TessPageSegMode as ^ {} deriving (Show, Eq) #}
@@ -191,17 +354,10 @@ cBoxToBox c = liftM4 Box (cBoxX c) (cBoxY c) (cBoxW c) (cBoxH c)
   fromIntegral `Int'  -- heigth
   } -> `()' #}
 
-{# fun TessBaseAPIGetUTF8Text as ^
-{ id `TessBaseAPI'
-  } -> `String' #}
+{# fun TessBaseAPIGetUTF8Text as ^ { id `TessBaseAPI' } -> `String' #}
 
-
-{# fun TessBaseAPIGetHOCRText as ^
-{ id `TessBaseAPI',
-  fromIntegral `Int' -- ^ page number
-  } -> `String' #}
-
-
+-- | int is the page number
+{# fun TessBaseAPIGetHOCRText as ^ { id `TessBaseAPI', fromIntegral `Int' } -> `String' #}
 
 -- {# fun TesssBaseAPISetImage2 as ^
 -- { id `TessBaseAPI',

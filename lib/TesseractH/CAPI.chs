@@ -224,6 +224,8 @@ peekInt c = fromIntegral <$> peek c
   , id `Ptr PIX'
   } -> `Int' fromIntegral #}
 -- LEPT_DLL extern l_int32 pixOtsuAdaptiveThreshold ( PIX *pixs, l_int32 sx, l_int32 sy, l_int32 smoothx, l_int32 smoothy, l_float32 scorefract, PIX **ppixth, PIX **ppixd );
+
+
 -- ** Tesseract
 {# enum TessOcrEngineMode as ^ {} deriving (Show, Eq) #}
 {# enum TessPageSegMode as ^ {} deriving (Show, Eq) #}
@@ -236,10 +238,21 @@ peekInt c = fromIntegral <$> peek c
 {# fun pure TessVersion as ^ {} -> `String' #}
 
 {# pointer *TessBaseAPI as ^ newtype #}
+
+{# pointer *ETEXT_DESC as ETEXT_DESC newtype #}
+
 {# fun TessBaseAPICreate as ^ {} -> `TessBaseAPI' id #}
+
+{# fun TessBaseAPIClear as ^ {id `TessBaseAPI'} -> `()'  #}
+
 {# fun TessBaseAPIDelete as ^ {id `TessBaseAPI'} -> `()'  #}
-{# fun TessBaseAPISetInputName as ^ {id `TessBaseAPI',
-                              `String' } -> `()' #}
+
+{# fun TessBaseAPIEnd as ^ {id `TessBaseAPI'} -> `()'  #}
+
+{# fun TessBaseAPISetInputName as ^ 
+{id `TessBaseAPI',
+ `String' } -> `()' #}
+
 {# fun TessBaseAPISetOutputName as ^ {id `TessBaseAPI',
                                      `String'} -> `()' #}
 
@@ -307,5 +320,10 @@ peekInt c = fromIntegral <$> peek c
 {# fun TessBaseAPIMeanTextConf as ^ 
 { id `TessBaseAPI' }
 -> `Int' #}
+
+{# fun TessBaseAPIRecognize as ^
+{ id `TessBaseAPI',
+  id `ETEXT_DESC'
+} -> `Int' fromIntegral #}
 
 

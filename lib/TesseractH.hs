@@ -12,19 +12,20 @@ data TessRect =
   TessRect { rL :: Int, rT :: Int, rW :: Int, rH :: Int }
 
 -- | This monad tracks the context of a tesseract session.
-type Tess a = ReaderT TessBaseAPI IO a
+type Tess a = ReaderT TessBaseAPIHs IO a
 
 version = tessVersion
 
-tessContext :: FilePath -> IO TessBaseAPI
-tessContext fn = do
-  s <- tessBaseAPICreate 
-  tessBaseAPIInit2 s "" "eng" OEM_DEFAULT 
-  tessBaseAPISetPageSegMode s PSM_AUTO
-  ptr <- pixRead fn 
-  tessBaseAPISetImage2 s ptr
-  return s
+-- tessContext :: FilePath -> IO TessBaseAPI
+-- tessContext fn = do
+--   s <- tessBaseAPICreate 
+--   tessBaseAPIInit2 s "" "eng" OEM_DEFAULT 
+--   tessBaseAPISetPageSegMode s PSM_AUTO
+--   ptr <- pixRead fn 
+--   tessBaseAPISetImage2 s ptr
+--   return s
 
+{-
 ocrRect :: TessRect -> Tess String
 ocrRect TessRect{..} = do
   s <- ask 
@@ -49,3 +50,4 @@ runOCRRegions :: [TessRect] -> FilePath -> IO [String]
 runOCRRegions rects fn = do
   s <- tessContext fn
   runReaderT (ocrRects rects) s
+-}

@@ -34,7 +34,7 @@ cIntToEnum = toEnum . fromIntegral
 {# pointer *PIX #}
 {# pointer *PIXA #}
 {# pointer *BOX as BOX -> Box #}
-{# pointer *BOXA  #}
+{# pointer *BOXA #}
 
 type PIXHandle = Ptr PIX
 
@@ -237,35 +237,45 @@ peekInt c = fromIntegral <$> peek c
 
 {# fun pure TessVersion as ^ {} -> `String' #}
 
-{# pointer *TessBaseAPI as ^ newtype #}
+{# pointer *TessBaseAPI as TessBaseAPIHs foreign newtype #}
+
+foreign import ccall "tesseract/capi.h &TessBaseAPIEnd"
+  tessBaseAPIEndPtr :: FunPtr (Ptr (TessBaseAPIHs) -> IO ())
 
 {# pointer *ETEXT_DESC as ETEXT_DESC newtype #}
 
-{# fun TessBaseAPICreate as ^ {} -> `TessBaseAPI' id #}
+newTessBaseAPI :: Ptr TessBaseAPIHs -> IO TessBaseAPIHs
+newTessBaseAPI p = do
+  fp <- newForeignPtr tessBaseAPIEndPtr p
+  return $ TessBaseAPIHs fp
 
-{# fun TessBaseAPIClear as ^ {id `TessBaseAPI'} -> `()'  #}
+{# fun TessBaseAPICreate as ^ {} -> `TessBaseAPIHs' newTessBaseAPI* #}
 
-{# fun TessBaseAPIDelete as ^ {id `TessBaseAPI'} -> `()'  #}
+{- 
+{# fun TessBaseAPIClear as ^ {withTessBaseAPIHs `TessBaseAPIHs'} -> `()'  #}
 
-{# fun TessBaseAPIEnd as ^ {id `TessBaseAPI'} -> `()'  #}
+{# fun TessBaseAPIDelete as ^ {withTessBaseAPIHs `TessBaseAPIHs'} -> `()'  #}
+
+{# fun TessBaseAPIEnd as ^ {withTessBaseAPIHs `TessBaseAPIHs'} -> `()'  #}
 
 {# fun TessBaseAPISetInputName as ^ 
-{id `TessBaseAPI',
+{id `TessBaseAPIHs',
  `String' } -> `()' #}
 
-{# fun TessBaseAPISetOutputName as ^ {id `TessBaseAPI',
+{# fun TessBaseAPISetOutputName as ^ {withTessBaseAPIHs `TessBaseAPIHs',
                                      `String'} -> `()' #}
+-}
 
 -- | baseAPI, datapath, langauge, mode
 {# fun TessBaseAPIInit2 as ^
-{ id `TessBaseAPI',
+{ withTessBaseAPIHs* `TessBaseAPIHs',
   `String', -- datapath
-  `String', -- languate
+  `String', -- language
   cIntFromEnum `TessOcrEngineMode'
   } -> `Int' fromIntegral #}
 
 {# fun TessBaseAPISetPageSegMode as ^
-{ id `TessBaseAPI',
+{ withTessBaseAPIHs* `TessBaseAPIHs',
   cIntFromEnum `TessPageSegMode'
   } -> `()' #}
 
@@ -281,7 +291,7 @@ peekInt c = fromIntegral <$> peek c
 -- 1. bytes per line
 --
 {# fun TessBaseAPISetImage as ^
-{ id `TessBaseAPI',
+{ withTessBaseAPIHs* `TessBaseAPIHs',
   id `Ptr CUChar',    -- imagedata
   fromIntegral `Int', -- width
   fromIntegral `Int', -- height
@@ -290,12 +300,14 @@ peekInt c = fromIntegral <$> peek c
 } -> `()' #}
 
 {# fun TessBaseAPISetImage2 as ^
-{ id `TessBaseAPI',
+{ withTessBaseAPIHs* `TessBaseAPIHs',
   id `PIX'    -- imagedata, struct from leptonica
 } -> `()' #}
 
+{-
+
 {# fun TessBaseAPISetRectangle as ^
-{ id `TessBaseAPI',
+{ withTessBaseAPIHs `TessBaseAPIHs',
   fromIntegral `Int', -- left
   fromIntegral `Int', -- top
   fromIntegral `Int', -- width
@@ -303,27 +315,29 @@ peekInt c = fromIntegral <$> peek c
   } -> `()' #}
 
 {# fun TessBaseAPIGetUTF8Text as ^
-{ id `TessBaseAPI'
+{ withTessBaseAPIHs `TessBaseAPIHs'
   } -> `String' #}
 
 
 {# fun TessBaseAPIGetHOCRText as ^
-{ id `TessBaseAPI',
+{ withTessBaseAPIHs `TessBaseAPIHs',
   fromIntegral `Int' -- ^ page number
   } -> `String' #}
+-}
 
 {# fun TessBaseAPISetSourceResolution as ^ 
-{ id `TessBaseAPI',
+{ withTessBaseAPIHs* `TessBaseAPIHs',
   `Int'    -- ppi 
 } -> `()' #}
 
+{- 
 {# fun TessBaseAPIMeanTextConf as ^ 
-{ id `TessBaseAPI' }
+{ withTessBaseAPIHs `TessBaseAPIHs' }
 -> `Int' #}
 
 {# fun TessBaseAPIRecognize as ^
-{ id `TessBaseAPI',
+{ withTessBaseAPIHs `TessBaseAPIHs',
   id `ETEXT_DESC'
 } -> `Int' fromIntegral #}
 
-
+-}

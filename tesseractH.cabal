@@ -25,7 +25,7 @@ Library
                    TesseractH.CAPI
   hs-source-dirs:  lib
   Build-tools:     c2hs
-  ghc-options:     -Wall 
+  ghc-options:     -Wall -static
   cc-options:      -U__BLOCKS__
   Other-modules: 
-  Extra-libraries: tesseract
+  Extra-libraries: tesseract lept

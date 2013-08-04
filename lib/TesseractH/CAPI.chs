@@ -32,11 +32,20 @@ cIntToEnum = toEnum . fromIntegral
 -- data CBox = CBox
 
 {# pointer *PIX #}
+
+-- foreign import ccall "leptonica/pix.h &pixDestroy"
+--   pixDestroyPtr :: FunPtr (Ptr (PIXHs) -> IO ())
+
+-- newPIX :: Ptr PIXHs -> IO PIXHs 
+-- newPIX p = PIXHs <$> (newForeignPtr pixDestroyPtr p)
+
+-- touchPIX (PIXHs fp) = touchForeignPtr fp 
+
 {# pointer *PIXA #}
 {# pointer *BOX as BOX -> Box #}
 {# pointer *BOXA #}
 
-type PIXHandle = Ptr PIX
+--type PIXHandle = Ptr PIX
 
 
 {# fun boxaCreate as ^ {fromIntegral `Int'} -> `BOXA' id #}
@@ -100,13 +109,13 @@ cBoxToBox c = liftM4 Box (cBoxX c) (cBoxY c) (cBoxW c) (cBoxH c)
   , fromIntegral `Int'
   } -> `BOXA' id #}
 
-toHandle' pix =  alloca (\h -> do 
-                            poke h pix
-                            return h)
+-- toHandle' pix =  alloca (\h -> do 
+--                             poke h pix
+--                             return h)
 
-toHandle pix = (\h -> do 
-                   poke h pix
-                   return h)               
+-- toHandle pix = (\h -> do 
+--                    poke h pix
+--                    return h)               
                
 {# fun pixCreate as ^ 
   { fromIntegral `Int' -- ^ width
@@ -114,13 +123,14 @@ toHandle pix = (\h -> do
   , fromIntegral `Int' -- ^ depth
   } -> `PIX' id #}
 
+
 -- | similar to passing &pix to pixDestroy 
---pixDestroyPIX pix = with pix pixDestroy
+pixDestroyPIX pix = with pix pixDestroy
 
-{# fun pixDestroy as ^ 
-  { id `PIXHandle' 
-  } -> `()' id #}
+{# fun pixDestroy as ^ { id `Ptr PIX' } -> `()' id #}
 
+
+ 
 {# fun pixCreateNoInit as ^ 
   { fromIntegral `Int' -- ^ width
   , fromIntegral `Int' -- ^ height
@@ -213,16 +223,20 @@ peekInt c = fromIntegral <$> peek c
 --   1. thresholds.. can be null
 --
 --   1. destination pix
+
+{-
 {# fun pixOtsuAdaptiveThreshold  as ^
-  { id `PIX'
+  { withPIXHs* `PIXHs'
   , fromIntegral `Int'
   , fromIntegral `Int'
   , fromIntegral `Int'
   , fromIntegral `Int'
   , CFloat `Float'
-  , id `Ptr PIX'
-  , id `Ptr PIX'
+  , withPIXHs* `PIXHs'
+  , withPIXHs* `PIXHs'
   } -> `Int' fromIntegral #}
+-}
+
 -- LEPT_DLL extern l_int32 pixOtsuAdaptiveThreshold ( PIX *pixs, l_int32 sx, l_int32 sy, l_int32 smoothx, l_int32 smoothy, l_float32 scorefract, PIX **ppixth, PIX **ppixd );
 
 
@@ -248,6 +262,8 @@ newTessBaseAPI :: Ptr TessBaseAPIHs -> IO TessBaseAPIHs
 newTessBaseAPI p = do
   fp <- newForeignPtr tessBaseAPIEndPtr p
   return $ TessBaseAPIHs fp
+
+touchAPI (TessBaseAPIHs fp) = touchForeignPtr fp 
 
 {# fun TessBaseAPICreate as ^ {} -> `TessBaseAPIHs' newTessBaseAPI* #}
 
@@ -297,17 +313,19 @@ newTessBaseAPI p = do
   fromIntegral `Int', -- height
   fromIntegral `Int', -- bytes per pixel
   fromIntegral `Int'  -- bytes per line
-} -> `()' #}
+} -> `()'  #}
 
+-- special (PIX fp) act = 
+--   withForeignPtr (castForeignPtr fp) act
+ 
 {# fun TessBaseAPISetImage2 as ^
 { withTessBaseAPIHs* `TessBaseAPIHs',
   id `PIX'    -- imagedata, struct from leptonica
 } -> `()' #}
 
-{-
 
 {# fun TessBaseAPISetRectangle as ^
-{ withTessBaseAPIHs `TessBaseAPIHs',
+{ withTessBaseAPIHs* `TessBaseAPIHs',
   fromIntegral `Int', -- left
   fromIntegral `Int', -- top
   fromIntegral `Int', -- width
@@ -315,29 +333,28 @@ newTessBaseAPI p = do
   } -> `()' #}
 
 {# fun TessBaseAPIGetUTF8Text as ^
-{ withTessBaseAPIHs `TessBaseAPIHs'
+{ withTessBaseAPIHs* `TessBaseAPIHs'
   } -> `String' #}
 
 
 {# fun TessBaseAPIGetHOCRText as ^
-{ withTessBaseAPIHs `TessBaseAPIHs',
+{ withTessBaseAPIHs* `TessBaseAPIHs',
   fromIntegral `Int' -- ^ page number
   } -> `String' #}
--}
+
 
 {# fun TessBaseAPISetSourceResolution as ^ 
 { withTessBaseAPIHs* `TessBaseAPIHs',
   `Int'    -- ppi 
 } -> `()' #}
 
-{- 
+
 {# fun TessBaseAPIMeanTextConf as ^ 
-{ withTessBaseAPIHs `TessBaseAPIHs' }
+{ withTessBaseAPIHs* `TessBaseAPIHs' }
 -> `Int' #}
 
 {# fun TessBaseAPIRecognize as ^
-{ withTessBaseAPIHs `TessBaseAPIHs',
+{ withTessBaseAPIHs* `TessBaseAPIHs',
   id `ETEXT_DESC'
 } -> `Int' fromIntegral #}
 
--}

@@ -7,13 +7,12 @@ import qualified Data.Text as T
 import Foreign
 import Foreign.C
 import Foreign.C.Types()
+--import Foreign.Marshal.Utils(with)
 import Control.Monad (liftM4)
 import Control.Monad (liftM4)
 import Control.Applicative ((<$>))
 
 #include <tesseract/capi.h>
--- #include <leptonica/environ.h>
--- #include <leptonica/pix.h>
 #include <leptonica/allheaders.h>
 
 -- | marshal an Enum (Haskell to C)
@@ -32,21 +31,9 @@ cIntToEnum = toEnum . fromIntegral
 -- data CBox = CBox
 
 {# pointer *PIX #}
-
--- foreign import ccall "leptonica/pix.h &pixDestroy"
---   pixDestroyPtr :: FunPtr (Ptr (PIXHs) -> IO ())
-
--- newPIX :: Ptr PIXHs -> IO PIXHs 
--- newPIX p = PIXHs <$> (newForeignPtr pixDestroyPtr p)
-
--- touchPIX (PIXHs fp) = touchForeignPtr fp 
-
 {# pointer *PIXA #}
 {# pointer *BOX as BOX -> Box #}
 {# pointer *BOXA #}
-
---type PIXHandle = Ptr PIX
-
 
 {# fun boxaCreate as ^ {fromIntegral `Int'} -> `BOXA' id #}
 {# fun boxaGetCount as ^ {id `BOXA'} -> `Int' fromIntegral #}
@@ -109,27 +96,21 @@ cBoxToBox c = liftM4 Box (cBoxX c) (cBoxY c) (cBoxW c) (cBoxH c)
   , fromIntegral `Int'
   } -> `BOXA' id #}
 
--- toHandle' pix =  alloca (\h -> do 
---                             poke h pix
---                             return h)
-
--- toHandle pix = (\h -> do 
---                    poke h pix
---                    return h)               
-               
 {# fun pixCreate as ^ 
   { fromIntegral `Int' -- ^ width
   , fromIntegral `Int' -- ^ height
   , fromIntegral `Int' -- ^ depth
   } -> `PIX' id #}
 
-
--- | similar to passing &pix to pixDestroy 
-pixDestroyPIX pix = with pix pixDestroy
-
 {# fun pixDestroy as ^ { id `Ptr PIX' } -> `()' id #}
 
+{# fun pixFreeData as ^ { id `PIX' } -> `Int' fromIntegral #}
 
+{# fun pixCreateHeader as ^ 
+  { fromIntegral `Int' -- ^ width
+  , fromIntegral `Int' -- ^ height
+  , fromIntegral `Int' -- ^ depth
+  } -> `PIX' id #}
  
 {# fun pixCreateNoInit as ^ 
   { fromIntegral `Int' -- ^ width
@@ -224,18 +205,16 @@ peekInt c = fromIntegral <$> peek c
 --
 --   1. destination pix
 
-{-
 {# fun pixOtsuAdaptiveThreshold  as ^
-  { withPIXHs* `PIXHs'
+  { id `PIX'
   , fromIntegral `Int'
   , fromIntegral `Int'
   , fromIntegral `Int'
   , fromIntegral `Int'
   , CFloat `Float'
-  , withPIXHs* `PIXHs'
-  , withPIXHs* `PIXHs'
+  , id `Ptr PIX'
+  , id `Ptr PIX'
   } -> `Int' fromIntegral #}
--}
 
 -- LEPT_DLL extern l_int32 pixOtsuAdaptiveThreshold ( PIX *pixs, l_int32 sx, l_int32 sy, l_int32 smoothx, l_int32 smoothy, l_float32 scorefract, PIX **ppixth, PIX **ppixd );
 
@@ -251,11 +230,13 @@ peekInt c = fromIntegral <$> peek c
 
 {# fun pure TessVersion as ^ {} -> `String' #}
 
+-- This is going to be a ForeignPtr. Haskell can destroy the pointer and its resources with finalizer. Contrast to PIX above, which has a more complicated memory management story where part of the struct is managed by Haskell. 
+
 {# pointer *TessBaseAPI as TessBaseAPIHs foreign newtype #}
 
 foreign import ccall "tesseract/capi.h &TessBaseAPIEnd"
   tessBaseAPIEndPtr :: FunPtr (Ptr (TessBaseAPIHs) -> IO ())
-
+                       
 {# pointer *ETEXT_DESC as ETEXT_DESC newtype #}
 
 newTessBaseAPI :: Ptr TessBaseAPIHs -> IO TessBaseAPIHs
@@ -267,20 +248,21 @@ touchAPI (TessBaseAPIHs fp) = touchForeignPtr fp
 
 {# fun TessBaseAPICreate as ^ {} -> `TessBaseAPIHs' newTessBaseAPI* #}
 
-{- 
-{# fun TessBaseAPIClear as ^ {withTessBaseAPIHs `TessBaseAPIHs'} -> `()'  #}
+{# fun TessBaseAPIClear as ^ 
+{withTessBaseAPIHs* `TessBaseAPIHs'} -> `()'  #}
 
-{# fun TessBaseAPIDelete as ^ {withTessBaseAPIHs `TessBaseAPIHs'} -> `()'  #}
+{# fun TessBaseAPIDelete as ^ 
+{withTessBaseAPIHs* `TessBaseAPIHs'} -> `()'  #}
 
-{# fun TessBaseAPIEnd as ^ {withTessBaseAPIHs `TessBaseAPIHs'} -> `()'  #}
+{# fun TessBaseAPIEnd as ^ 
+{withTessBaseAPIHs* `TessBaseAPIHs'} -> `()'  #}
 
-{# fun TessBaseAPISetInputName as ^ 
-{id `TessBaseAPIHs',
- `String' } -> `()' #}
+{# fun TessBaseAPISetInputName as ^  
+{withTessBaseAPIHs* `TessBaseAPIHs',  `String' } -> `()' #}
 
-{# fun TessBaseAPISetOutputName as ^ {withTessBaseAPIHs `TessBaseAPIHs',
-                                     `String'} -> `()' #}
--}
+{# fun TessBaseAPISetOutputName as ^ 
+{withTessBaseAPIHs* `TessBaseAPIHs',
+ `String'} -> `()' #}
 
 -- | baseAPI, datapath, langauge, mode
 {# fun TessBaseAPIInit2 as ^
@@ -315,14 +297,10 @@ touchAPI (TessBaseAPIHs fp) = touchForeignPtr fp
   fromIntegral `Int'  -- bytes per line
 } -> `()'  #}
 
--- special (PIX fp) act = 
---   withForeignPtr (castForeignPtr fp) act
- 
 {# fun TessBaseAPISetImage2 as ^
 { withTessBaseAPIHs* `TessBaseAPIHs',
   id `PIX'    -- imagedata, struct from leptonica
 } -> `()' #}
-
 
 {# fun TessBaseAPISetRectangle as ^
 { withTessBaseAPIHs* `TessBaseAPIHs',

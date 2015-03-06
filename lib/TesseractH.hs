@@ -1,34 +1,38 @@
 {-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE ForeignFunctionInterface #-}
 module TesseractH where
 
-import Control.Arrow ((&&&))
-import Control.Monad -- (forM)
+--import Control.Arrow ((&&&))
+--import Control.Monad -- (forM)
 import Control.Monad.Reader
---import Foreign.C.Types (CULong)
---import Foreign.Ptr (Ptr, nullFunPtr)
-import System.IO.Unsafe
+---import Foreign.C.Types -- (CULong)
+---import Foreign.Ptr ---(Ptr, nullFunPtr)
+--import System.IO.Unsafe
+
 import TesseractH.CAPI
+
 data TessRect =
   TessRect { rL :: Int, rT :: Int, rW :: Int, rH :: Int }
 
 -- | This monad tracks the context of a tesseract session.
 type Tess a = ReaderT TessBaseAPIHs IO a
 
+version :: String
 version = tessVersion
 
 -- tessContext :: FilePath -> IO TessBaseAPI
 -- tessContext fn = do
---   s <- tessBaseAPICreate 
---   tessBaseAPIInit2 s "" "eng" OEM_DEFAULT 
+--   s <- tessBaseAPICreate
+--   tessBaseAPIInit2 s "" "eng" OEM_DEFAULT
 --   tessBaseAPISetPageSegMode s PSM_AUTO
---   ptr <- pixRead fn 
+--   ptr <- pixRead fn
 --   tessBaseAPISetImage2 s ptr
 --   return s
 
 {-
 ocrRect :: TessRect -> Tess String
 ocrRect TessRect{..} = do
-  s <- ask 
+  s <- ask
   liftIO $ tessBaseAPISetRectangle s rL rT rW rH
   txt <- liftIO $ tessBaseAPIGetUTF8Text s
   return txt

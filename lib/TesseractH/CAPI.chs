@@ -30,6 +30,7 @@ cIntToEnum = toEnum . fromIntegral
 -- *** Box stuff`
 -- data CBox = CBox
 
+
 {# pointer *PIX #}
 {# pointer *PIXA #}
 {# pointer *BOX as BOX -> Box #}
@@ -61,7 +62,7 @@ cBoxToBox c = liftM4 Box (cBoxX c) (cBoxY c) (cBoxW c) (cBoxH c)
 {# fun pixRead as ^ {`String'} -> `PIX' id #}
 
 -- | second argument is size
-{# fun pixReadMemPng as ^ {id `Ptr CUChar', fromIntegral `Int'} -> `PIX' id #}
+-- {# fun pixReadMemPng as ^ {id `Ptr CUChar', fromIntegral `Int'} -> `PIX' id #}
 
 -- | Cant get the args into haddock properly so here they are..
 --
@@ -75,6 +76,7 @@ cBoxToBox c = liftM4 Box (cBoxX c) (cBoxY c) (cBoxW c) (cBoxH c)
 --
 --   1. warnings
 --
+
 {# fun pixReadMemJpeg as ^
   { id `Ptr CUChar'    -- ^ image data
   , fromIntegral `Int' -- ^ size
@@ -103,20 +105,12 @@ cBoxToBox c = liftM4 Box (cBoxX c) (cBoxY c) (cBoxW c) (cBoxH c)
   } -> `PIX' id #}
 
 
-foreign import ccall "&pixDestroy" pixDestroy :: FunPtr ( Ptr PIX -> IO () )
-foreign import ccall "&pixFreeData" pixFreeData :: FunPtr ( PIX -> IO () )
-foreign import ccall "dynamic" callFunPtr :: FunPtr (Ptr () -> IO ()) -> Ptr () -> IO ()
+--foreign import ccall "&pixDestroy" pixDestroy :: FunPtr ( Ptr PIX -> IO () )
+--foreign import ccall "&pixFreeData" pixFreeData :: FunPtr ( PIX -> IO () )
+--foreign import ccall "dynamic" callFunPtr :: FunPtr (Ptr () -> IO ()) -> Ptr () -> IO ()
 
--- newPIXFromData :: Ptr CUInt -> IO (ForeignPtr PIX)
--- newPIXFromData p d = do
---   ne
-
---   fp = newForeignPtr pixDestroyFunPtr p
---   return fp
-
-
--- {# fun pixDestroy as ^ { id `Ptr PIX' } -> `()' id #}
--- {# fun pixFreeData as ^ { id `PIX' } -> `Int' fromIntegral #}
+{# fun pixDestroy as ^ { id `Ptr PIX' } -> `()' id #}
+{# fun pixFreeData as ^ { id `PIX' } -> `Int' fromIntegral #}
 
 {# fun pixCreateHeader as ^
   { fromIntegral `Int' -- ^ width
@@ -197,36 +191,36 @@ peekInt c = fromIntegral <$> peek c
   , alloca- `Int' peekInt* -- ^ pyres
   } -> `Int' fromIntegral #}
 
--- ** Image Processing
+-- -- ** Image Processing
 
--- | args are:
---
---   1. pix
---
---   1. tile width
---
---   1. tile height
---
---   1. smooth x
---
---   1. smooth y
---
---   1. scorefract (typically 0.1)
---
---   1. thresholds.. can be null
---
---   1. destination pix
+-- -- | args are:
+-- --
+-- --   1. pix
+-- --
+-- --   1. tile width
+-- --
+-- --   1. tile height
+-- --
+-- --   1. smooth x
+-- --
+-- --   1. smooth y
+-- --
+-- --   1. scorefract (typically 0.1)
+-- --
+-- --   1. thresholds.. can be null
+-- --
+-- --   1. destination pix
 
-{# fun pixOtsuAdaptiveThreshold  as ^
-  { id `PIX'
-  , fromIntegral `Int'
-  , fromIntegral `Int'
-  , fromIntegral `Int'
-  , fromIntegral `Int'
-  , CFloat `Float'
-  , id `Ptr PIX'
-  , id `Ptr PIX'
-  } -> `Int' fromIntegral #}
+-- {# fun pixOtsuAdaptiveThreshold  as ^
+--   { id `PIX'
+--   , fromIntegral `Int'
+--   , fromIntegral `Int'
+--   , fromIntegral `Int'
+--   , fromIntegral `Int'
+--   , CFloat `Float'
+--   , id `Ptr PIX'
+--   , id `Ptr PIX'
+--   } -> `Int' fromIntegral #}
 
 -- LEPT_DLL extern l_int32 pixOtsuAdaptiveThreshold ( PIX *pixs, l_int32 sx, l_int32 sy, l_int32 smoothx, l_int32 smoothy, l_float32 scorefract, PIX **ppixth, PIX **ppixd );
 
@@ -347,4 +341,3 @@ touchAPI (TessBaseAPIHs fp) = touchForeignPtr fp
 { withTessBaseAPIHs* `TessBaseAPIHs',
   id `ETEXT_DESC'
 } -> `Int' fromIntegral #}
-
